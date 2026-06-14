@@ -108,7 +108,7 @@ with col2:
     st.plotly_chart(fig_barras, use_container_width=True)
 
 st.markdown("---")
-st.subheader("⏳ Evolución Temporal de la Porra (Miedo de Vecina)")
+st.subheader("⏳ Evolución Temporal de la Porra")
 fig_lineas = px.line(df_hist, x="Fecha", y="Probabilidad (%)", color="Jugador", markers=True)
 fig_lineas.update_xaxes(type='category')
 st.plotly_chart(fig_lineas, use_container_width=True)

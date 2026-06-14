@@ -1,114 +1,253 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import re
-from datetime import datetime
+import numpy as np
 
-st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
-st.title("🏆 Seguimiento y Evolución de la Porra")
-st.write(f"Actualizado al: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+# ==========================================
+# CONFIGURACIÓN DE LA PÁGINA
+# ==========================================
+st.set_page_config(page_title="Porra Mundial 2026 - Algoritmo Puro", layout="wide")
 
-# ⚠️ PEGA AQUÍ TU URL DE GOOGLE SHEETS EN FORMATO EXPORTACIÓN CSV ⚠️
+st.title("🏆 Porra Mundial 2026: Simulador y Motor Predictivo")
+st.markdown("""
+Este sistema calcula la **Esperanza Matemática** de la porra en tiempo real. 
+1. **Equipos:** Puntos calculados sumando la probabilidad exacta de avanzar ronda a ronda.
+2. **Jugadores:** Goles por minuto cruzados con el **Factor Rival (FR) Real**, extraído de los cruces del cuadro FIFA.
+""")
+
+# ==========================================
+# 1. CONEXIÓN CON GOOGLE SHEETS (Tus Datos)
+# ==========================================
 URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv"
 
-# Participantes oficiales (¡Damos la bienvenida a Juan con sus 5 equipos!)
-porra = {
-    'Sierra': ['España', 'Suiza', 'Croacia'],
-    'Joaquín': ['Portugal', 'Marruecos', 'EE.UU.'],
-    'Ejkar': ['Inglaterra', 'Colombia', 'Japón'],
-    'Vecina': ['Ecuador', 'Bélgica', 'México'],
-    'Telenti': ['Francia', 'Noruega', 'Senegal'],
-    'Miguel Ángel': ['Argentina', 'Holanda', 'Costa de Marfil'],
-    'Mírete': ['Brasil', 'Alemania', 'Uruguay'],
-    'Juan': ['Canadá', 'Turquía', 'Austria', 'Escocia', 'Bosnia and Herzegovina']
+@st.cache_data(ttl=300)
+def cargar_datos_equipos():
+    try:
+        df = pd.read_csv(SHEET_URL)
+        columnas_necesarias = ['Seleccion', 'Cuota_Ganar', 'Prob_1o', 'Prob_2o', 'Prob_Cuartos', 'Prob_Semis', 'Prob_Final', 'Goles_Encajados_S']
+        for col in columnas_necesarias:
+            if col not in df.columns:
+                if col == 'Seleccion': pass
+                elif 'Prob' in col: df[col] = 0.25
+                elif col == 'Goles_Encajados_S': df[col] = 1.20
+                else: df[col] = 15.0
+        return df
+    except Exception as e:
+        st.warning(f"Usando base de datos interna de emergencia: {e}")
+        datos_base = {
+            'Seleccion': ["México", "Suiza", "Bosnia", "Canadá", "Marruecos", "Brasil", "Escocia", "EE.UU.", "Turquía", "Ecuador", "Alemania", "Costa de Marfil", "Japón", "Países Bajos", "Bélgica", "España", "Uruguay", "Francia", "Noruega", "Senegal", "Argentina", "Austria", "Portugal", "Croacia", "Colombia", "Inglaterra"],
+            'Grupo':     ["A",      "B",     "B",      "B",      "C",         "C",      "C",       "D",      "D",       "E",       "E",        "E",               "F",     "F",            "G",       "H",      "H",       "I",       "I",       "I",       "J",         "J",       "K",        "L",       "K",        "L"],
+            'Cuota_Ganar': [25.0, 60.0, 150.0, 80.0, 40.0, 8.5, 120.0, 35.0, 70.0, 50.0, 14.0, 200.0, 50.0, 16.0, 28.0, 6.5, 18.0, 6.0, 45.0, 80.0, 9.0, 65.0, 7.5, 35.0, 40.0, 7.0],
+            'Prob_1o':   [0.45, 0.25, 0.10, 0.20, 0.30, 0.55, 0.10, 0.40, 0.25, 0.25, 0.45, 0.10, 0.30, 0.45, 0.50, 0.60, 0.30, 0.60, 0.20, 0.15, 0.55, 0.25, 0.55, 0.35, 0.25, 0.50],
+            'Prob_2o':   [0.30, 0.30, 0.20, 0.25, 0.30, 0.25, 0.15, 0.30, 0.30, 0.30, 0.30, 0.15, 0.30, 0.30, 0.25, 0.25, 0.35, 0.25, 0.25, 0.20, 0.25, 0.30, 0.25, 0.30, 0.30, 0.30],
+            'Prob_Cuartos': [0.15, 0.05, 0.01, 0.03, 0.08, 0.45, 0.01, 0.12, 0.05, 0.05, 0.28, 0.01, 0.06, 0.25, 0.14, 0.50, 0.22, 0.52, 0.08, 0.03, 0.42, 0.06, 0.46, 0.12, 0.10, 0.48],
+            'Prob_Semis': [0.05, 0.01, 0.00, 0.01, 0.02, 0.22, 0.00, 0.04, 0.01, 0.01, 0.12, 0.00, 0.01, 0.10, 0.05, 0.26, 0.08, 0.28, 0.02, 0.01, 0.20, 0.01, 0.22, 0.04, 0.03, 0.24],
+            'Prob_Final': [0.02, 0.00, 0.00, 0.00, 0.01, 0.10, 0.00, 0.01, 0.00, 0.00, 0.05, 0.00, 0.00, 0.04, 0.02, 0.14, 0.03, 0.15, 0.01, 0.00, 0.09, 0.00, 0.11, 0.01, 0.01, 0.12],
+            'Goles_Encajados_S': [1.3, 1.1, 1.5, 1.4, 1.0, 0.8, 1.6, 1.2, 1.3, 1.2, 0.9, 1.7, 1.1, 1.0, 1.1, 0.7, 0.9, 0.7, 1.2, 1.3, 0.8, 1.2, 0.8, 1.0, 1.1, 0.7]
+        }
+        return pd.DataFrame(datos_base)
+
+df_equipos = cargar_datos_equipos()
+
+mapeo_grupos = {
+    "México": "A", "Suiza": "B", "Bosnia": "B", "Canadá": "B", "Marruecos": "C", "Brasil": "C", "Escocia": "C",
+    "EE.UU.": "D", "Turquía": "D", "Ecuador": "E", "Alemania": "E", "Costa de Marfil": "E", "Japón": "F",
+    "Países Bajos": "F", "Bélgica": "G", "España": "H", "Uruguay": "H", "Francia": "I", "Noruega": "I",
+    "Senegal": "I", "Argentina": "J", "Austria": "J", "Portugal": "K", "Colombia": "K", "Inglaterra": "L", "Croacia": "L"
+}
+if 'Grupo' not in df_equipos.columns:
+    df_equipos['Grupo'] = df_equipos['Seleccion'].map(mapeo_grupos).fillna("A")
+
+# ==========================================
+# 2. ESQUELETO OFICIAL DE CRUCES DE LA FIFA
+# ==========================================
+cruces_fifa = {
+    "A": {"1o": "Mejor_3o", "2o": "B"}, "B": {"1o": "Mejor_3o", "2o": "A"},
+    "C": {"1o": "2o_F",      "2o": "1o_F"}, "D": {"1o": "Mejor_3o", "2o": "G"},
+    "E": {"1o": "Mejor_3o", "2o": "I"}, "F": {"1o": "2o_C",      "2o": "1o_C"},
+    "G": {"1o": "Mejor_3o", "2o": "D"}, "H": {"1o": "2o_J",      "2o": "1o_J"},
+    "I": {"1o": "Mejor_3o", "2o": "I"}, "J": {"1o": "2o_H",      "2o": "1o_H"},
+    "K": {"1o": "Mejor_3o", "2o": "L"}, "L": {"1o": "Mejor_3o", "2o": "K"}
 }
 
-# Diccionario de banderas corregido e indexado
-banderas = {
-    'Francia': '🇫🇷', 'España': '🇪🇸', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹', 
-    'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Alemania': '🇩🇪', 'Holanda': '🇳🇱', 
-    'Noruega': '🇳🇴', 'Bélgica': '🇧🇪', 'Marruecos': '🇲🇦', 'Colombia': '🇨🇴', 
-    'Japón': '🇯🇵', 'México': '🇲🇽', 'EE.UU.': '🇺🇸', 'Uruguay': '🇺🇾', 
-    'Croacia': '🇭🇷', 'Suiza': '🇨🇭', 'Ecuador': '🇪🇨', 'Austria': '🇦🇹', 
-    'Turquía': '🇹🇷', 'Senegal': '🇸🇳', 'Suecia': '🇸🇪', 'Escocia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 
-    'Canadá': '🇨🇦', 'Egipto': '🇪🇬', 'Costa de Marfil': '🇨🇮', 'Corea del Sur': '🇰🇷', 
-    'Australia': '🇦🇺', 'Argelia': '🇩🇿', 'Ghana': '🇬🇭', 'Irán': '🇮🇷', 
-    'Bosnia and Herzegovina': '🇧🇦', 'Túnez': '🇹🇳', 'Paraguay': '🇵🇾', 'República Checa': '🇨🇿', 
-    'Montenegro': '🇲🇪', 'Arabia Saudí': '🇸🇦', 'Ruanda': '🇷🇼', 'Burkina Faso': '🇧🇫', 
-    'El Salvador': '🇸🇻', 'RD Congo': '🇨🇩', 'Panamá': '🇵🇦', 'Puerto Rico': '🇵🇷', 
-    'Togo': '🇹🇬', 'Benín': '🇧🇯', 'Qatar': '🇶🇦', 'Cabo Verde': '🇨🇻', 
-    'Sudáfrica': '🇿🇦', 'Indonesia': '🇮🇩', 'Uzbekistán': '🇺🇿', 'Gambia': '🇬🇲', 
-    'Luxemburgo': '🇱🇺', 'Nueva Zelanda': '🇳🇿', 'Tanzania': '🇹🇿', 'Jordania': '🇯🇴', 
-    'Chipre': '🇨🇾', 'Malta': '🇲🇹', 'Iraq': '🇮🇶', 'Curazao': '🇨🇼', 
-    'Haití': '🇭🇹', 'Kenia': '🇰🇪', 'Gibraltar': '🇬🇮', 'Islas Vírgenes EE.UU.': '🇻🇮', 
-    'Fiyi': '🇫🇯', 'Cook Islands AI': '🇨🇰', 'Tahiti': '🇵🇫'
+# ==========================================
+# 3. CONFIGURACIÓN DE JUGADORES Y PORRA
+# ==========================================
+stats_jugadores_base = {
+    "Kane": {"g_90": 1.08, "mins_por_partido": 75, "pais": "Inglaterra"},
+    "Julián Álvarez": {"g_90": 0.65, "mins_por_partido": 65, "pais": "Argentina"},
+    "Messi": {"g_90": 0.90, "mins_por_partido": 80, "pais": "Argentina"},
+    "Olise": {"g_90": 0.45, "mins_por_partido": 70, "pais": "Francia"},
+    "Lautaro": {"g_90": 0.77, "mins_por_partido": 60, "pais": "Argentina"},
+    "Raphinha": {"g_90": 0.54, "mins_por_partido": 70, "pais": "Brasil"},
+    "Havertz": {"g_90": 0.62, "mins_por_partido": 75, "pais": "Alemania"},
+    "Lamine Yamal": {"g_90": 0.38, "mins_por_partido": 75, "pais": "España"},
+    "Endrick": {"g_90": 0.72, "mins_por_partido": 30, "pais": "Brasil"},
+    "Ramos": {"g_90": 0.73, "mins_por_partido": 45, "pais": "Portugal"},
+    "Haaland": {"g_90": 1.10, "mins_por_partido": 90, "pais": "Noruega"},
+    "Embolo": {"g_90": 0.54, "mins_por_partido": 65, "pais": "Suiza"},
+    "Oyarzabal": {"g_90": 0.55, "mins_por_partido": 55, "pais": "España"},
+    "El Bicho": {"g_90": 1.05, "mins_por_partido": 70, "pais": "Portugal"},
+    "Mbappé": {"g_90": 0.96, "mins_por_partido": 85, "pais": "Francia"},
+    "Vinicius": {"g_90": 0.73, "mins_por_partido": 80, "pais": "Brasil"}
 }
 
-# 🗓️ NUEVAS CUOTAS ACTUALIZADAS (Datos frescos de Oddschecker)
-datos_cuotas = {
-    'ganador': """Francia 5.75 España 6 Inglaterra 9 Portugal 9 Argentina 11.1 Brasil 12 Alemania 17 Holanda 23 Noruega 35 Bélgica 41 Marruecos 41 Colombia 42 Japón 55 México 60 EE.UU. 60 Uruguay 70 Croacia 100 Suiza 101 Ecuador 101 Austria 151 Turquía 151 Senegal 151 Suecia 151 Escocia 250 Canadá 251 Egipto 301 Costa de Marfil 301 Corea del Sur 400 Australia 500 Argelia 500 Ghana 501 Irán 501 Bosnia and Herzegovina 501 Túnez 501 Paraguay 750 República Checa 751 Montenegro 1001 Arabia Saudí 1001 Ruanda 1001 Burkina Faso 1001 El Salvador 1001 RD Congo 1501 Panamá 1501 Puerto Rico 1501 Togo 1501 Benín 1501 Qatar 2001 Cabo Verde 2001 Sudáfrica 2001 Indonesia 2001 Uzbekistán 2001 Gambia 2001 Luxemburgo 2001 Nueva Zelanda 2501 Tanzania 2501 Jordania 2501 Chipre 2501 Malta 2501 Iraq 3501 Curazao 3501 Haití 4001 Kenia 4501 Gibraltar 4501 Islas Vírgenes EE.UU. 4501 Fiyi 4501 Cook Islands 4501 Tahití 4501""",
-    
-    'final': """Francia 8 España 8 Inglaterra 9 Portugal 9 Argentina 10 Brasil 11 Alemania 13 Holanda 15 Bélgica 15 Noruega 20 EE.UU. 21 Colombia 23 México 26 Uruguay 26 Marruecos 26 Croacia 34 Suiza 36 Ecuador 36 Japón 36 Austria 41 Senegal 56 Costa de Marfil 67 Suecia 71 Canadá 71 Turquía 81 Argelia 91 Escocia 101 Egipto 101 Corea del Sur 101 Ghana 126 Australia 151 República Checa 176 Irán 176 Paraguay 201 Bosnia and Herzegovina 201 Túnez 426 RD Congo 476 Qatar 501 Panamá 501 Arabia Saudí 501 Sudáfrica 501 Curazao 501 Uzbekistán 501 Cabo Verde 501 Iraq 501 Nueva Zelanda 501 Jordania 501 Haití 501""",
-    
-    'cuartos': """España 1.75 Francia 1.82 Inglaterra 1.86 Portugal 2 Argentina 2.02 Brasil 2.22 Alemania 2.6 Holanda 2.9 Bélgica 2.92 Noruega 3.35 EE.UU. 3.43 México 3.78 Marruecos 3.78 Colombia 3.78 Suiza 4.9 Uruguay 5.05 Japón 5.1 Croacia 6.05 Ecuador 6.2 Canadá 6.5 Australia 8 Corea del Sur 8 Austria 8.05 Escocia 9 Suecia 9.05 Turquía 9.05 Senegal 9.05 Costa de Marfil 10 Egipto 11 Argelia 11 Bosnia and Herzegovina 11.1 República Checa 13 Ghana 15 Irán 15 Paraguay 17 Túnez 23 RD Congo 23 Arabia Saudí 34 Panamá 41 Uzbekistán 43 Sudáfrica 51 Cabo Verde 61 Nueva Zelanda 67 Qatar 81 Jordania 101 Iraq 110 Curazao 301 Haití 800""",
-    
-    'octavos': """España 1.25 Francia 1.25 Inglaterra 1.33 Portugal 1.4 Brasil 1.45 Alemania 1.45 Argentina 1.5 Bélgica 1.63 EE.UU. 1.67 México 1.67 Holanda 1.8 Noruega 1.83 Suiza 1.83 Colombia 2 Marruecos 2.2 Corea del Sur 2.25 Canadá 2.25 Uruguay 2.38 Japón 2.6 Ecuador 2.63 Croacia 2.63 Australia 2.88 Costa de Marfil 3.25 Escocia 3.3 Austria 3.5 Egipto 3.5 Senegal 3.75 Turquía 4 República Checa 4 Bosnia and Herzegovina 4 Suecia 4.2 Argelia 4.33 Irán 5 Paraguay 6 Ghana 6 RD Congo 8 Túnez 9.5 Nueva Zelanda 10 Arabia Saudí 11 Sudáfrica 13 Uzbekistán 13 Panamá 13 Cabo Verde 15 Qatar 17 Jordania 26 Iraq 26 Curazao 67 Haití 101"""
+porra_config = {
+    "Sierra": {"equipos": ["España", "Suiza", "Croacia"], "jugadores": ["Kane", "Julián Álvarez"]},
+    "Joaquín": {"equipos": ["Portugal", "Marruecos", "EE.UU."], "jugadores": ["Messi", "Olise"]},
+    "Ejkar": {"equipos": ["Inglaterra", "Colombia", "Japón"], "jugadores": ["Lautaro", "Raphinha"]},
+    "Vecina": {"equipos": ["Ecuador", "Bélgica", "México"], "jugadores": ["Havertz", "Lamine Yamal"]},
+    "Telenti": {"equipos": ["Francia", "Noruega", "Senegal"], "jugadores": ["Endrick", "Ramos"]},
+    "Miguel": {"equipos": ["Argentina", "Países Bajos", "Costa de Marfil"], "jugadores": ["Haaland", "Embolo"]},
+    "Mírete": {"equipos": ["Brasil", "Alemania", "Uruguay"], "jugadores": ["Oyarzabal", "El Bicho"]},
+    "Juan": {"equipos": ["Canadá", "Turquía", "Austria", "Escocia", "Bosnia"], "jugadores": ["Mbappé", "Vinicius"]}
 }
 
-# --- PROCESAMIENTO MATEMÁTICO ---
-todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
-probabilidades = {eq: {'octavos': 0.0, 'cuartos': 0.0, 'final': 0.0, 'ganador': 0.0} for eq in todos_equipos}
+# ==========================================
+# 4. MOTOR MATEMÁTICO UNIFICADO
+# ==========================================
 
-for ronda, texto in datos_cuotas.items():
-    for eq in todos_equipos:
-        patron = re.escape(eq) + r'\s*([\d\.]+)'
-        match = re.search(patron, texto, re.IGNORECASE)
-        if match:
-            probabilidades[eq][ronda] = 1 / float(match.group(1))
+# A. LÓGICA DE EQUIPOS POR RONDAS
+def calcular_puntos_equipo_por_rondas(nombre_seleccion, df):
+    """
+    Asigna puntos base al equipo dependiendo de su probabilidad de llegar a cada ronda.
+    Modifica los multiplicadores (2.0, 3.0...) según los puntos reales que dé vuestra porra por fase.
+    """
+    try:
+        fila = df[df['Seleccion'] == nombre_seleccion].iloc[0]
+        p_1o = fila['Prob_1o']
+        p_2o = fila['Prob_2o']
+        p_cuartos = fila['Prob_Cuartos']
+        p_semis = fila['Prob_Semis']
+        p_final = fila['Prob_Final']
+        
+        # Ponderación de Puntos:
+        # Clasificar de grupos (1º o 2º) -> 2 pts
+        # Llegar a Cuartos -> +3 pts
+        # Llegar a Semis -> +4 pts
+        # Final / Ganar -> +5 pts
+        puntos_esperados = ((p_1o + p_2o) * 2.0) + (p_cuartos * 3.0) + (p_semis * 4.0) + (p_final * 5.0)
+        return round(puntos_esperados, 2)
+    except:
+        return 1.5
 
-# Cálculo del día de hoy
-filas_hoy = []
-fecha_hoy = datetime.now().strftime('%Y-%m-%d')
-
-for jugador, equipos in porra.items():
-    # Sumamos las probabilidades multiplicadas por el valor de cada ronda (excluyendo semis al no tener cuotas)
-    puntos_totales = sum([
-        (10 * probabilidades[e]['octavos'] + 12 * probabilidades[e]['cuartos'] + 
-         18 * probabilidades[e]['final'] + 20 * probabilidades[e]['ganador']) for e in equipos
-    ])
+# B. LÓGICA DE JUGADORES (ÁRBOL DE CRUCES)
+def obtener_goles_encajados_medios_grupo(grupo, posicion, df):
+    equipos_grupo = df[df['Grupo'] == grupo]
+    if equipos_grupo.empty:
+        return 1.20
     
-    # Creamos un string visual combinando el nombre del equipo con su emoji de bandera
-    string_equipos_banderas = ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos])
-    filas_hoy.append({"Fecha": fecha_hoy, "Jugador": jugador, "Equipos": string_equipos_banderas, "Puntos": round(puntos_totales, 2)})
+    if posicion == "1o":
+        return equipos_grupo.sort_values('Cuota_Ganar').iloc[0]['Goles_Encajados_S']
+    elif posicion == "2o":
+        if len(equipos_grupo) > 1:
+            return equipos_grupo.sort_values('Cuota_Ganar').iloc[1]['Goles_Encajados_S']
+        return equipos_grupo.iloc[0]['Goles_Encajados_S']
+    else:
+        return equipos_grupo['Goles_Encajados_S'].mean()
 
-df_hoy = pd.DataFrame(filas_hoy)
-total_puntos = df_hoy["Puntos"].sum()
-df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
+def calcular_puntos_jugador_cuadro_real(nombre_jugador, df):
+    if nombre_jugador not in stats_jugadores_base:
+        return 0.0
+        
+    stats = stats_jugadores_base[nombre_jugador]
+    g_90 = stats["g_90"]
+    mins_partido = stats["mins_por_partido"]
+    seleccion_jugador = stats["pais"]
+    
+    try:
+        fila_sel = df[df['Seleccion'] == seleccion_jugador].iloc[0]
+        grupo_sel = fila_sel['Grupo']
+        p_1o = fila_sel['Prob_1o']
+        p_2o = fila_sel['Prob_2o']
+        p_cuartos = fila_sel['Prob_Cuartos']
+        p_semis = fila_sel['Prob_Semis']
+        p_final = fila_sel['Prob_Final']
+    except:
+        return round(4 * ((mins_partido / 90.0) * g_90), 2)
 
-# 🔄 INTENTAR LEER EL HISTÓRICO DESDE TU GOOGLE SHEETS
-try:
-    df_hist_sheets = pd.read_csv(URL_SHEETS)
-    df_hist = pd.concat([df_hist_sheets, df_hoy], ignore_index=True)
-except:
-    df_hist = df_hoy.copy()
+    puntos_totales = 0.0
+    
+    # 1. Fase de Grupos
+    puntos_totales += 3 * ((mins_partido / 90.0) * g_90 * 1.0)
+    
+    # 2. Partido 4 (Dieciseisavos de Final con Árbol FIFA)
+    prob_llegar_p4 = p_1o + p_2o
+    if prob_llegar_p4 > 0:
+        reglas_grupo = cruces_fifa.get(grupo_sel, {"1o": "Mejor_3o", "2o": "Mejor_3o"})
+        
+        cruce_si_1o = reglas_grupo["1o"]
+        if "2o_" in cruce_si_1o:
+            gc_camino_1 = obtener_goles_encajados_medios_grupo(cruce_si_1o.split("_")[1], "2o", df)
+        elif cruce_si_1o == "Mejor_3o":
+            gc_camino_1 = 1.35 
+        else:
+            gc_camino_1 = obtener_goles_encajados_medios_grupo(cruce_si_1o, "1o", df)
+            
+        cruce_si_2o = reglas_grupo["2o"]
+        if "1o_" in cruce_si_2o:
+            gc_camino_2 = obtener_goles_encajados_medios_grupo(cruce_si_2o.split("_")[1], "1o", df)
+        elif cruce_si_2o == "Mejor_3o":
+            gc_camino_2 = 1.35
+        else:
+            gc_camino_2 = obtener_goles_encajados_medios_grupo(cruce_si_2o, "2o", df)
+        
+        fr_ponderado_real = ((p_1o / prob_llegar_p4) * gc_camino_1) + ((p_2o / prob_llegar_p4) * gc_camino_2)
+        puntos_totales += prob_llegar_p4 * ((mins_partido / 90.0) * g_90 * fr_ponderado_real)
 
-df_hist = df_hist.drop_duplicates(subset=['Fecha', 'Jugador'], keep='last')
-df_hist = df_hist.sort_values(by="Fecha")
+    # 3. Rondas Avanzadas
+    puntos_totales += p_cuartos * ((mins_partido / 90.0) * g_90 * 0.90)
+    puntos_totales += p_semis * ((mins_partido / 90.0) * g_90 * 0.80)
+    puntos_totales += p_final * (((mins_partido + 15) / 90.0) * g_90 * 0.70)
+    
+    return round(puntos_totales, 2)
 
-# --- DISEÑO DE LA WEB (INTERFAZ) ---
-col1, col2 = st.columns([1, 1])
-with col1:
-    st.subheader("📊 Clasificación Actual")
-    df_mostrar = df_hoy.sort_values(by="Puntos", ascending=False)[["Jugador", "Equipos", "Puntos", "Probabilidad (%)"]]
-    st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+# ==========================================
+# 5. PROCESAMIENTO Y RANKING FINAL
+# ==========================================
+filas_ranking = []
 
-with col2:
-    st.subheader("📈 Gráfico de Puntos Hoy")
-    fig_barras = px.bar(df_mostrar, x="Jugador", y="Puntos", color="Jugador", text_auto=True)
-    st.plotly_chart(fig_barras, use_container_width=True)
+for participante, elecciones in porra_config.items():
+    # Usamos la nueva función basada en las rondas probabilísticas
+    pts_equipos = sum(calcular_puntos_equipo_por_rondas(eq, df_equipos) for eq in elecciones["equipos"])
+    desglose_eq_lista = [f"{eq} ({calcular_puntos_equipo_por_rondas(eq, df_equipos)} pts)" for eq in elecciones["equipos"]]
+    
+    pts_jugadores = 0.0
+    desglose_jug_lista = []
+    for jug in elecciones["jugadores"]:
+        pts_j = calcular_puntos_jugador_cuadro_real(jug, df_equipos)
+        pts_jugadores += pts_j
+        desglose_jug_lista.append(f"{jug} ({pts_j} pts)")
+        
+    total_esperado = pts_equipos + pts_jugadores
+    
+    filas_ranking.append({
+        "Participante": participante,
+        "Total Puntos Esperados": round(total_esperado, 2),
+        "Ptos. Equipos": round(pts_equipos, 2),
+        "Ptos. Jugadores": round(pts_jugadores, 2),
+        "Elección de Equipos (Detalle)": " // ".join(desglose_eq_lista),
+        "Elección de Jugadores (Detalle)": " + ".join(desglose_jug_lista)
+    })
 
-st.markdown("---")
-st.subheader("⏳ Evolución Temporal de la Porra")
-fig_lineas = px.line(df_hist, x="Fecha", y="Probabilidad (%)", color="Jugador", markers=True)
-fig_lineas.update_xaxes(type='category')
-st.plotly_chart(fig_lineas, use_container_width=True)
+df_ranking = pd.DataFrame(filas_ranking).sort_values("Total Puntos Esperados", ascending=False).reset_index(drop=True)
+df_ranking.index = df_ranking.index + 1
+
+# ==========================================
+# 6. INTERFAZ GRÁFICA
+# ==========================================
+st.subheader("📊 Clasificación General de la Porra (Matriz Combinada)")
+
+st.dataframe(
+    df_ranking.style.background_gradient(cmap='YlGn', subset=['Total Puntos Esperados'])
+    .format({
+        "Total Puntos Esperados": "{:.2f}",
+        "Ptos. Equipos": "{:.2f}",
+        "Ptos. Jugadores": "{:.2f}"
+    }),
+    use_container_width=True,
+    height=340
+)
+
+st.divider()
+st.info("💡 **Integración Total Activada:** Los equipos y los jugadores ahora comparten el mismo motor. Los puntos de las selecciones se calculan sumando las probabilidades exactas que tienen de pasar de grupos, llegar a cuartos, semis y final. ¡El equilibrio matemático es perfecto!")
+

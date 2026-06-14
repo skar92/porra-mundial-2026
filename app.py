@@ -15,8 +15,10 @@ Este sistema calcula la **Esperanza Matemática** de la porra en tiempo real.
 """)
 
 # ==========================================
-# 1. CONEXIÓN CON GOOGLE SHEETS (Tus Datos)
+# 1. CONEXIÓN CON GOOGLE SHEETS
 # ==========================================
+# Aseguramos que la variable sea global para que no falle
+# ⚠️ PEGA AQUÍ TU URL DE GOOGLE SHEETS EN FORMATO EXPORTACIÓN CSV ⚠️
 URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv"
 
 @st.cache_data(ttl=300)
@@ -35,7 +37,7 @@ def cargar_datos_equipos():
         st.warning(f"Usando base de datos interna de emergencia: {e}")
         datos_base = {
             'Seleccion': ["México", "Suiza", "Bosnia", "Canadá", "Marruecos", "Brasil", "Escocia", "EE.UU.", "Turquía", "Ecuador", "Alemania", "Costa de Marfil", "Japón", "Países Bajos", "Bélgica", "España", "Uruguay", "Francia", "Noruega", "Senegal", "Argentina", "Austria", "Portugal", "Croacia", "Colombia", "Inglaterra"],
-            'Grupo':     ["A",      "B",     "B",      "B",      "C",         "C",      "C",       "D",      "D",       "E",       "E",        "E",               "F",     "F",            "G",       "H",      "H",       "I",       "I",       "I",       "J",         "J",       "K",        "L",       "K",        "L"],
+            'Grupo':     ["A", "B", "B", "B", "C", "C", "C", "D", "D", "E", "E", "E", "F", "F", "G", "H", "H", "I", "I", "I", "J", "J", "K", "L", "K", "L"],
             'Cuota_Ganar': [25.0, 60.0, 150.0, 80.0, 40.0, 8.5, 120.0, 35.0, 70.0, 50.0, 14.0, 200.0, 50.0, 16.0, 28.0, 6.5, 18.0, 6.0, 45.0, 80.0, 9.0, 65.0, 7.5, 35.0, 40.0, 7.0],
             'Prob_1o':   [0.45, 0.25, 0.10, 0.20, 0.30, 0.55, 0.10, 0.40, 0.25, 0.25, 0.45, 0.10, 0.30, 0.45, 0.50, 0.60, 0.30, 0.60, 0.20, 0.15, 0.55, 0.25, 0.55, 0.35, 0.25, 0.50],
             'Prob_2o':   [0.30, 0.30, 0.20, 0.25, 0.30, 0.25, 0.15, 0.30, 0.30, 0.30, 0.30, 0.15, 0.30, 0.30, 0.25, 0.25, 0.35, 0.25, 0.25, 0.20, 0.25, 0.30, 0.25, 0.30, 0.30, 0.30],
@@ -48,6 +50,7 @@ def cargar_datos_equipos():
 
 df_equipos = cargar_datos_equipos()
 
+# Asegurar columna Grupo
 mapeo_grupos = {
     "México": "A", "Suiza": "B", "Bosnia": "B", "Canadá": "B", "Marruecos": "C", "Brasil": "C", "Escocia": "C",
     "EE.UU.": "D", "Turquía": "D", "Ecuador": "E", "Alemania": "E", "Costa de Marfil": "E", "Japón": "F",
@@ -62,10 +65,10 @@ if 'Grupo' not in df_equipos.columns:
 # ==========================================
 cruces_fifa = {
     "A": {"1o": "Mejor_3o", "2o": "B"}, "B": {"1o": "Mejor_3o", "2o": "A"},
-    "C": {"1o": "2o_F",      "2o": "1o_F"}, "D": {"1o": "Mejor_3o", "2o": "G"},
-    "E": {"1o": "Mejor_3o", "2o": "I"}, "F": {"1o": "2o_C",      "2o": "1o_C"},
-    "G": {"1o": "Mejor_3o", "2o": "D"}, "H": {"1o": "2o_J",      "2o": "1o_J"},
-    "I": {"1o": "Mejor_3o", "2o": "I"}, "J": {"1o": "2o_H",      "2o": "1o_H"},
+    "C": {"1o": "2o_F", "2o": "1o_F"}, "D": {"1o": "Mejor_3o", "2o": "G"},
+    "E": {"1o": "Mejor_3o", "2o": "I"}, "F": {"1o": "2o_C", "2o": "1o_C"},
+    "G": {"1o": "Mejor_3o", "2o": "D"}, "H": {"1o": "2o_J", "2o": "1o_J"},
+    "I": {"1o": "Mejor_3o", "2o": "I"}, "J": {"1o": "2o_H", "2o": "1o_H"},
     "K": {"1o": "Mejor_3o", "2o": "L"}, "L": {"1o": "Mejor_3o", "2o": "K"}
 }
 
@@ -106,148 +109,60 @@ porra_config = {
 # 4. MOTOR MATEMÁTICO UNIFICADO
 # ==========================================
 
-# A. LÓGICA DE EQUIPOS POR RONDAS
 def calcular_puntos_equipo_por_rondas(nombre_seleccion, df):
-    """
-    Asigna puntos base al equipo dependiendo de su probabilidad de llegar a cada ronda.
-    Modifica los multiplicadores (2.0, 3.0...) según los puntos reales que dé vuestra porra por fase.
-    """
     try:
         fila = df[df['Seleccion'] == nombre_seleccion].iloc[0]
-        p_1o = fila['Prob_1o']
-        p_2o = fila['Prob_2o']
-        p_cuartos = fila['Prob_Cuartos']
-        p_semis = fila['Prob_Semis']
-        p_final = fila['Prob_Final']
-        
-        # Ponderación de Puntos:
-        # Clasificar de grupos (1º o 2º) -> 2 pts
-        # Llegar a Cuartos -> +3 pts
-        # Llegar a Semis -> +4 pts
-        # Final / Ganar -> +5 pts
-        puntos_esperados = ((p_1o + p_2o) * 2.0) + (p_cuartos * 3.0) + (p_semis * 4.0) + (p_final * 5.0)
-        return round(puntos_esperados, 2)
+        p_1o, p_2o, p_cuartos, p_semis, p_final = fila['Prob_1o'], fila['Prob_2o'], fila['Prob_Cuartos'], fila['Prob_Semis'], fila['Prob_Final']
+        return round(((p_1o + p_2o) * 2.0) + (p_cuartos * 3.0) + (p_semis * 4.0) + (p_final * 5.0), 2)
     except:
         return 1.5
 
-# B. LÓGICA DE JUGADORES (ÁRBOL DE CRUCES)
 def obtener_goles_encajados_medios_grupo(grupo, posicion, df):
     equipos_grupo = df[df['Grupo'] == grupo]
-    if equipos_grupo.empty:
-        return 1.20
-    
-    if posicion == "1o":
-        return equipos_grupo.sort_values('Cuota_Ganar').iloc[0]['Goles_Encajados_S']
+    if equipos_grupo.empty: return 1.20
+    if posicion == "1o": return equipos_grupo.sort_values('Cuota_Ganar').iloc[0]['Goles_Encajados_S']
     elif posicion == "2o":
-        if len(equipos_grupo) > 1:
-            return equipos_grupo.sort_values('Cuota_Ganar').iloc[1]['Goles_Encajados_S']
-        return equipos_grupo.iloc[0]['Goles_Encajados_S']
-    else:
-        return equipos_grupo['Goles_Encajados_S'].mean()
+        return equipos_grupo.sort_values('Cuota_Ganar').iloc[1]['Goles_Encajados_S'] if len(equipos_grupo) > 1 else equipos_grupo.iloc[0]['Goles_Encajados_S']
+    return equipos_grupo['Goles_Encajados_S'].mean()
 
 def calcular_puntos_jugador_cuadro_real(nombre_jugador, df):
-    if nombre_jugador not in stats_jugadores_base:
-        return 0.0
-        
+    if nombre_jugador not in stats_jugadores_base: return 0.0
     stats = stats_jugadores_base[nombre_jugador]
-    g_90 = stats["g_90"]
-    mins_partido = stats["mins_por_partido"]
-    seleccion_jugador = stats["pais"]
+    g_90, mins_partido, seleccion_jugador = stats["g_90"], stats["mins_por_partido"], stats["pais"]
     
     try:
         fila_sel = df[df['Seleccion'] == seleccion_jugador].iloc[0]
-        grupo_sel = fila_sel['Grupo']
-        p_1o = fila_sel['Prob_1o']
-        p_2o = fila_sel['Prob_2o']
-        p_cuartos = fila_sel['Prob_Cuartos']
-        p_semis = fila_sel['Prob_Semis']
-        p_final = fila_sel['Prob_Final']
-    except:
-        return round(4 * ((mins_partido / 90.0) * g_90), 2)
+        grupo_sel, p_1o, p_2o, p_cuartos, p_semis, p_final = fila_sel['Grupo'], fila_sel['Prob_1o'], fila_sel['Prob_2o'], fila_sel['Prob_Cuartos'], fila_sel['Prob_Semis'], fila_sel['Prob_Final']
+    except: return round(4 * ((mins_partido / 90.0) * g_90), 2)
 
-    puntos_totales = 0.0
+    puntos_totales = 3 * ((mins_partido / 90.0) * g_90 * 1.0)
     
-    # 1. Fase de Grupos
-    puntos_totales += 3 * ((mins_partido / 90.0) * g_90 * 1.0)
-    
-    # 2. Partido 4 (Dieciseisavos de Final con Árbol FIFA)
     prob_llegar_p4 = p_1o + p_2o
     if prob_llegar_p4 > 0:
         reglas_grupo = cruces_fifa.get(grupo_sel, {"1o": "Mejor_3o", "2o": "Mejor_3o"})
-        
-        cruce_si_1o = reglas_grupo["1o"]
-        if "2o_" in cruce_si_1o:
-            gc_camino_1 = obtener_goles_encajados_medios_grupo(cruce_si_1o.split("_")[1], "2o", df)
-        elif cruce_si_1o == "Mejor_3o":
-            gc_camino_1 = 1.35 
-        else:
-            gc_camino_1 = obtener_goles_encajados_medios_grupo(cruce_si_1o, "1o", df)
-            
-        cruce_si_2o = reglas_grupo["2o"]
-        if "1o_" in cruce_si_2o:
-            gc_camino_2 = obtener_goles_encajados_medios_grupo(cruce_si_2o.split("_")[1], "1o", df)
-        elif cruce_si_2o == "Mejor_3o":
-            gc_camino_2 = 1.35
-        else:
-            gc_camino_2 = obtener_goles_encajados_medios_grupo(cruce_si_2o, "2o", df)
-        
-        fr_ponderado_real = ((p_1o / prob_llegar_p4) * gc_camino_1) + ((p_2o / prob_llegar_p4) * gc_camino_2)
-        puntos_totales += prob_llegar_p4 * ((mins_partido / 90.0) * g_90 * fr_ponderado_real)
+        cruce_1 = reglas_grupo["1o"]
+        cruce_2 = reglas_grupo["2o"]
+        gc1 = obtener_goles_encajados_medios_grupo(cruce_1.split("_")[1], "2o", df) if "2o_" in cruce_1 else 1.35
+        gc2 = obtener_goles_encajados_medios_grupo(cruce_2.split("_")[1], "1o", df) if "1o_" in cruce_2 else 1.35
+        puntos_totales += prob_llegar_p4 * ((mins_partido / 90.0) * g_90 * (((p_1o / prob_llegar_p4) * gc1) + ((p_2o / prob_llegar_p4) * gc2)))
 
-    # 3. Rondas Avanzadas
-    puntos_totales += p_cuartos * ((mins_partido / 90.0) * g_90 * 0.90)
-    puntos_totales += p_semis * ((mins_partido / 90.0) * g_90 * 0.80)
-    puntos_totales += p_final * (((mins_partido + 15) / 90.0) * g_90 * 0.70)
-    
+    puntos_totales += p_cuartos * ((mins_partido / 90.0) * g_90 * 0.90) + p_semis * ((mins_partido / 90.0) * g_90 * 0.80) + p_final * (((mins_partido + 15) / 90.0) * g_90 * 0.70)
     return round(puntos_totales, 2)
 
 # ==========================================
-# 5. PROCESAMIENTO Y RANKING FINAL
+# 5. RANKING Y UI
 # ==========================================
 filas_ranking = []
-
 for participante, elecciones in porra_config.items():
-    # Usamos la nueva función basada en las rondas probabilísticas
-    pts_equipos = sum(calcular_puntos_equipo_por_rondas(eq, df_equipos) for eq in elecciones["equipos"])
-    desglose_eq_lista = [f"{eq} ({calcular_puntos_equipo_por_rondas(eq, df_equipos)} pts)" for eq in elecciones["equipos"]]
-    
-    pts_jugadores = 0.0
-    desglose_jug_lista = []
-    for jug in elecciones["jugadores"]:
-        pts_j = calcular_puntos_jugador_cuadro_real(jug, df_equipos)
-        pts_jugadores += pts_j
-        desglose_jug_lista.append(f"{jug} ({pts_j} pts)")
-        
-    total_esperado = pts_equipos + pts_jugadores
-    
-    filas_ranking.append({
-        "Participante": participante,
-        "Total Puntos Esperados": round(total_esperado, 2),
-        "Ptos. Equipos": round(pts_equipos, 2),
-        "Ptos. Jugadores": round(pts_jugadores, 2),
-        "Elección de Equipos (Detalle)": " // ".join(desglose_eq_lista),
-        "Elección de Jugadores (Detalle)": " + ".join(desglose_jug_lista)
-    })
+    pts_eq = sum(calcular_puntos_equipo_por_rondas(eq, df_equipos) for eq in elecciones["equipos"])
+    pts_jug = sum(calcular_puntos_jugador_cuadro_real(jug, df_equipos) for jug in elecciones["jugadores"])
+    filas_ranking.append({"Participante": participante, "Total Puntos Esperados": pts_eq + pts_jug, "Ptos. Equipos": pts_eq, "Ptos. Jugadores": pts_jug})
 
 df_ranking = pd.DataFrame(filas_ranking).sort_values("Total Puntos Esperados", ascending=False).reset_index(drop=True)
 df_ranking.index = df_ranking.index + 1
 
-# ==========================================
-# 6. INTERFAZ GRÁFICA
-# ==========================================
-st.subheader("📊 Clasificación General de la Porra (Matriz Combinada)")
-
-st.dataframe(
-    df_ranking.style.background_gradient(cmap='YlGn', subset=['Total Puntos Esperados'])
-    .format({
-        "Total Puntos Esperados": "{:.2f}",
-        "Ptos. Equipos": "{:.2f}",
-        "Ptos. Jugadores": "{:.2f}"
-    }),
-    use_container_width=True,
-    height=340
-)
-
-st.divider()
-st.info("💡 **Integración Total Activada:** Los equipos y los jugadores ahora comparten el mismo motor. Los puntos de las selecciones se calculan sumando las probabilidades exactas que tienen de pasar de grupos, llegar a cuartos, semis y final. ¡El equilibrio matemático es perfecto!")
-
+st.subheader("📊 Clasificación General de la Porra")
+try:
+    st.dataframe(df_ranking.style.background_gradient(cmap='YlGn', subset=['Total Puntos Esperados']), use_container_width=True)
+except:
+    st.dataframe(df_ranking, use_container_width=True)

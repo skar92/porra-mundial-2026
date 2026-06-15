@@ -9,7 +9,8 @@ st.title("🏆 Seguimiento y Evolución de la Porra")
 st.write(f"Actualizado al: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
 # ⚠️ PEGA AQUÍ TU URL DE GOOGLE SHEETS EN FORMATO EXPORTACIÓN CSV ⚠️
-URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv"
+#URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv"
+URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv&gid=0"
 
 # Participantes oficiales
 porra = {

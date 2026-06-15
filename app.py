@@ -85,11 +85,11 @@ for jugador, equipos in porra.items():
     
     # Creamos un string visual combinando el nombre del equipo con su emoji de bandera
     string_equipos_banderas = ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos])
-    filas_hoy.append({"Fecha": fecha_hoy, "Jugador": jugador, "Equipos": string_equipos_banderas, "Puntos": round(puntos_totales, 2)})
+    filas_hoy.append({"Fecha": fecha_hoy, "Jugador": jugador, "Equipos": string_equipos_banderas, "Puntos Esperados": round(puntos_totales, 2)})
 
 df_hoy = pd.DataFrame(filas_hoy)
-total_puntos = df_hoy["Puntos"].sum()
-df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
+total_puntos = df_hoy["Puntos Esperados"].sum()
+df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
 
 # 🔄 INTENTAR LEER EL HISTÓRICO DESDE TU GOOGLE SHEETS
 try:
@@ -105,12 +105,12 @@ df_hist = df_hist.sort_values(by="Fecha")
 col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("📊 Clasificación Actual")
-    df_mostrar = df_hoy.sort_values(by="Puntos", ascending=False)[["Jugador", "Equipos", "Puntos", "Probabilidad (%)"]]
+    df_mostrar = df_hoy.sort_values(by="Puntos", ascending=False)[["Jugador", "Equipos", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
 with col2:
-    st.subheader("📈 Gráfico de Puntos Hoy")
-    fig_barras = px.bar(df_mostrar, x="Jugador", y="Puntos", color="Jugador", text_auto=True)
+    st.subheader("📈 Gráfico de Puntos Esperados Hoy")
+    fig_barras = px.bar(df_mostrar, x="Jugador", y="Puntos Esperados", color="Jugador", text_auto=True)
     st.plotly_chart(fig_barras, use_container_width=True)
 
 st.markdown("---")

@@ -2,16 +2,22 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import re
+import requests
 from datetime import datetime
 
-st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
-st.title("🏆 Seguimiento y Evolución de la Porra")
-st.write(f"Actualizado al: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+# =================================================================
+# ⚙️ AQUÍ SE ESCRIBEN LAS APIS (JUSTO AQUÍ)
+# =================================================================
 
-# ⚠️ TU URL DE GOOGLE SHEETS EN FORMATO EXPORTACIÓN CSV ⚠️
-URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv&gid=0"
+URL_API_GOLES = "https://api.openligadb.de/getmatchdata/wm2026"
 
-# Participantes oficiales (Selecciones)
+ODDS_API_KEY = "bb4e2d54f5e310838ac064bdade169fd"
+
+URL_HISTORICO = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv&gid=0"
+
+# =================================================================
+# (A partir de aquí abajo viene el resto del código de la porra...)
+# --- CONFIGURACIÓN DE LA PORRA ---
 porra = {
     'Sierra': ['España', 'Suiza', 'Croacia'],
     'Joaquín': ['Portugal', 'Marruecos', 'EE.UU.'],
@@ -23,98 +29,141 @@ porra = {
     'Juan': ['Canadá', 'Turquía', 'Austria', 'Escocia', 'Bosnia and Herzegovina']
 }
 
-# ⚽ NUEVA CAPA: Futbolistas elegidos y sus puntos/goles actuales aportados
 porra_futbolistas = {
-    'Sierra': {'Kane': 0, 'Julián Álvarez': 0},
-    'Joaquín': {'Messi': 0, 'Olise': 0},
-    'Ejkar': {'Lautaro': 0, 'Raphinha': 0},
-    'Vecina': {'Havertz': 2, 'Lamine Yamal': 0},
-    'Telenti': {'Endrick': 0, 'Ramos': 0},
-    'Miguel Ángel': {'Haaland': 0, 'Embolo': 1},
-    'Mírete': ['Oyarzabal', 'El Bicho'], # Puedes usar lista si todos son 0, o dict
-    'Juan': {'Mbappé': 0, 'Vinicius': 1}
+    'Sierra': ['Harry Kane', 'Julián Álvarez'],
+    'Joaquín': ['Lionel Messi', 'Michael Olise'],
+    'Ejkar': ['Lautaro Martínez', 'Raphinha'],
+    'Vecina': ['Kai Havertz', 'Lamine Yamal'],
+    'Telenti': ['Endrick', 'Ramos'], 
+    'Miguel Ángel': ['Erling Haaland', 'Breel Embolo'],
+    'Mírete': ['Mikel Oyarzabal', 'Cristiano Ronaldo'],
+    'Juan': ['Kylian Mbappé', 'Vinícius Júnior']
 }
 
-# Normalizamos el formato de los futbolistas para el conteo de puntos actuales
-puntos_futbolistas_actuales = {}
-for jugador, datos in porra_futbolistas.items():
-    if isinstance(datos, dict):
-        puntos_futbolistas_actuales[jugador] = sum(datos.values())
-    else:
-        puntos_futbolistas_actuales[jugador] = 0 # Si es lista, asume 0 puntos por ahora
-
-# Diccionario de banderas
 banderas = {
     'Francia': '🇫🇷', 'España': '🇪🇸', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹', 
     'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Alemania': '🇩🇪', 'Holanda': '🇳🇱', 
     'Noruega': '🇳🇴', 'Bélgica': '🇧🇪', 'Marruecos': '🇲🇦', 'Colombia': '🇨🇴', 
     'Japón': '🇯🇵', 'México': '🇲🇽', 'EE.UU.': '🇺🇸', 'Uruguay': '🇺🇾', 
     'Croacia': '🇭🇷', 'Suiza': '🇨🇭', 'Ecuador': '🇪🇨', 'Austria': '🇦🇹', 
-    'Turquía': '🇹🇷', 'Senegal': '🇸🇳', 'Suecia': '🇸🇪', 'Escocia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 
-    'Canadá': '🇨🇦', 'Egipto': '🇪🇬', 'Costa de Marfil': '🇨🇮', 'Corea del Sur': '🇰🇷', 
-    'Australia': '🇦🇺', 'Argelia': '🇩🇿', 'Ghana': '🇬🇭', 'Irán': '🇮🇷', 
-    'Bosnia and Herzegovina': '🇧🇦', 'Túnez': '🇹🇳', 'Paraguay': '🇵🇾', 'República Checa': '🇨🇿', 
-    'Montenegro': '🇲🇪', 'Arabia Saudí': '🇸🇦', 'Ruanda': '🇷🇼', 'Burkina Faso': '🇧🇫', 
-    'El Salvador': '🇸🇻', 'RD Congo': '🇨🇩', 'Panamá': '🇵🇦', 'Puerto Rico': '🇵🇷', 
-    'Togo': '🇹🇬', 'Benín': '🇧🇯', 'Qatar': '🇶🇦', 'Cabo Verde': '🇨🇻', 
-    'Sudáfrica': '🇿🇦', 'Indonesia': '🇮🇩', 'Uzbekistán': '🇺🇿', 'Gambia': '🇬🇲', 
-    'Luxemburgo': '🇱🇺', 'Nueva Zelanda': '🇳🇿', 'Tanzania': '🇹🇿', 'Jordania': '🇯🇴', 
-    'Chipre': '🇨🇾', 'Malta': '🇲🇹', 'Iraq': '🇮🇶', 'Curazao': '🇨🇼', 
-    'Haití': '🇭🇹', 'Kenia': '🇰🇪', 'Gibraltar': '🇬🇮', 'Islas Vírgenes EE.UU.': '🇻🇮', 
-    'Fiyi': '🇫🇯', 'Cook Islands': '🇨🇰', 'Tahití': '🇵🇫'
+    'Turquía': '🇹🇷', 'Senegal': '🇸🇳', 'Escocia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Canadá': '🇨🇦', 
+    'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦'
 }
 
-# 🗓️ CUOTAS ACTUALIZADAS
-datos_cuotas = {
-    'ganador': """Francia 5.50 España 5.50 Inglaterra 8.00 Portugal 8.00 Brasil 10.00 Argentina 10.00 Alemania 15.00 Holanda 19.00 Bélgica 34.00 Noruega 34.00 EE.UU. 34.00 Colombia 41.00 Marruecos 41.00 México 51.00 Japón 51.00 Uruguay 67.00 Suiza 67.00 Croacia 81.00 Senegal 81.00 Suecia 81.00 Ecuador 101.00 Australia 101.00 Costa de Marfil 101.00 Turquía 126.00 Canadá 151.00 Escocia 151.00 Austria 151.00 Corea del Sur 201.00 Bosnia and Herzegovina 251.00 Argelia 251.00 Egipto 251.00 Paraguay 301.00 República Checa 301.00 Ghana 501.00 Irán 501.00 Túnez 751.00 RD Congo 751.00 Panamá 1001.00 Sudáfrica 1001.00 Uzbekistán 1001.00 Arabia Saudí 1001.00 Catar 1001.00 Nueva Zelanda 1001.00 Jordan 1001.00 Cabo Verde 1001.00 Iraq 1001.00 Haití 2501.00 Curazao 2501.00""",
-    
-    'final': """España 3.25 Francia 3.50 Inglaterra 4.00 Portugal 4.50 Argentina 5.00 Brasil 5.50 Alemania 7.00 Holanda 9.00 Noruega 13.00 Bélgica 15.00 Colombia 17.00 EE.UU. 17.00 México 17.00 Marruecos 17.00 Japón 23.00 Uruguay 26.00 Croacia 26.00 Suiza 26.00 Suecia 26.00 Ecuador 29.00 Australia 34.00 Austria 41.00 Canadá 41.00 Senegal 51.00 Turquía 51.00 Escocia 67.00 Argelia 67.00 Egipto 81.00 Costa de Marfil 81.00 Corea del Sur 101.00 Ghana 101.00 Bosnia and Herzegovina 101.00 Paraguay 126.00 Irán 126.00 República Checa 126.00 RD Congo 201.00 Arabia Saudí 251.00 Catar 251.00 Panamá 301.00 Nueva Zelanda 301.00 Jordan 351.00 Uzbekistán 401.00 Cabo Verde 401.00 Iraq 501.00 Túnez 701.00 Sudáfrica 1001.00 Curazao 1001.00 Haití 1001.00""",
-    
-    'semis': """España 2.10 Inglaterra 2.50 Francia 2.50 Argentina 3.00 Portugal 3.00 Brasil 3.40 Alemania 4.00 Holanda 5.50 Bélgica 5.50 Noruega 5.75 Colombia 7.00 EE.UU. 7.00 Marruecos 7.50 Uruguay 8.00 México 8.00 Japón 10.00 Croacia 10.50 Suecia 11.50 Suiza 12.00 Senegal 12.00 Austria 13.00 Canadá 15.00 Ecuador 18.00 Escocia 18.00 Bosnia and Herzegovina 19.50 Australia 21.00 Egipto 21.00 Corea del Sur 21.00 Costa de Marfil 21.00 Turquía 26.00 Argelia 29.00 Paraguay 34.00 Irán 34.00 Ghana 34.00 República Checa 36.00 Panamá 51.00 Arabia Saudí 67.00 RD Congo 67.00 Cabo Verde 101.00 Nueva Zelanda 126.00 Jordan 151.00 Catar 151.00 Uzbekistán 151.00 Túnez 301.00 Iraq 351.00 Curazao 1001.00 Haití 1001.00""",
-    
-    'cuartos': """España 1.62 Francia 1.70 Inglaterra 1.80 Argentina 1.90 Portugal 1.95 Brasil 2.15 Alemania 2.30 Bélgica 2.87 Holanda 3.00 EE.UU. 3.20 Noruega 3.25 México 3.50 Colombia 3.50 Marruecos 3.75 Uruguay 4.00 Japón 4.50 Suiza 4.50 Suecia 5.50 Canadá 6.00 Croacia 6.00 Australia 7.00 Austria 7.00 Costa de Marfil 7.00 Ecuador 7.00 Corea del Sur 8.00 Senegal 8.00 Escocia 8.50 Turquía 9.00 Argelia 11.00 Bosnia and Herzegovina 11.00 Egipto 11.00 Irán 12.00 República Checa 13.00 Ghana 13.00 Paraguay 17.00 RD Congo 21.00 Arabia Saudí 26.00 Cabo Verde 34.00 Uzbekistán 34.00 Iraq 41.00 Nueva Zelanda 41.00 Panamá 41.00 Sudáfrica 41.00 Túnez 41.00 Catar 51.00 Jordan 67.00 Haití 101.00 Curazao 151.00""",
-    
-    'octavos': """Francia 1.22 España 1.22 Inglaterra 1.25 Argentina 1.40 Brasil 1.40 Alemania 1.40 Portugal 1.40 México 1.50 Bélgica 1.57 EE.UU. 1.61 Suiza 1.80 Colombia 1.83 Noruega 1.83 Holanda 1.90 Uruguay 2.00 Canadá 2.20 Marruecos 2.20 Corea del Sur 2.25 Croacia 2.37 Japón 2.37 Australia 2.50 Suecia 2.50 Costa de Marfil 2.60 Ecuador 3.00 Escocia 3.00 Egipto 3.20 Austria 3.25 Senegal 3.25 Argelia 3.75 República Checa 3.75 Turquía 3.75 Bosnia and Herzegovina 4.00 Irán 4.00 Ghana 6.00 Paraguay 6.00 RD Congo 7.00 Nueva Zelanda 9.00 Arabia Saudí 9.00 Sudáfrica 11.00 Panamá 12.00 Uzbekistán 12.00 Cabo Verde 15.00 Catar 15.00 Iraq 17.00 Jordan 17.00 Túnez 17.00 Haití 41.00 Curazao 51.00"""
+# Traductores de nombres de países (La API de apuestas devuelve los nombres en inglés)
+traductor_paises = {
+    'France': 'Francia', 'Spain': 'España', 'England': 'Inglaterra', 'Portugal': 'Portugal',
+    'Argentina': 'Argentina', 'Brazil': 'Brasil', 'Germany': 'Alemania', 'Netherlands': 'Holanda',
+    'Norway': 'Noruega', 'Belgium': 'Bélgica', 'Morocco': 'Marruecos', 'Colombia': 'Colombia',
+    'Japan': 'Japón', 'Mexico': 'México', 'USA': 'EE.UU.', 'United States': 'EE.UU.', 'Uruguay': 'Uruguay',
+    'Croatia': 'Croacia', 'Switzerland': 'Suiza', 'Ecuador': 'Ecuador', 'Austria': 'Austria',
+    'Turkey': 'Turquía', 'Senegal': 'Senegal', 'Scotland': 'Escocia', 'Canada': 'Canadá',
+    'Ivory Coast': 'Costa de Marfil', 'Bosnia and Herzegovina': 'Bosnia and Herzegovina'
 }
 
-# --- PROCESAMIENTO MATEMÁTICO ---
-todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
-probabilidades = {eq: {'octavos': 0.0, 'cuartos': 0.0, 'semis': 0.0, 'final': 0.0, 'ganador': 0.0} for eq in todos_equipos}
+# --- APIS AUTOMATIZADAS (CON CACHÉ) ---
 
-for ronda, texto in datos_cuotas.items():
-    for eq in todos_equipos:
-        patron = re.escape(eq) + r'\s*([\d\.]+)'
-        match = re.search(patron, texto, re.IGNORECASE)
-        if match:
-            probabilidades[eq][ronda] = 1 / float(match.group(1))
+@st.cache_data(ttl=300)  # Goles en vivo: caché de 5 minutos
+def obtener_goles_futbolistas_live():
+    """Consulta OpenLigaDB y mapea con inteligencia los nombres de la API"""
+    puntos_en_vivo = {}
+    try:
+        res = requests.get("https://api.openligadb.de/getmatchdata/wm2026", timeout=5)
+        partidos = res.json()
+        
+        mapeo_goles_api = {}
+        for partido in partidos:
+            for gol in partido.get("goals", []):
+                goleador = gol.get("goalGetterName")
+                if goleador:
+                    goleador_limpio = goleador.lower().replace('á','a').replace('é','e').replace('í','i').replace('ó','o').replace('ú','u')
+                    mapeo_goles_api[goleador_limpio] = mapeo_goles_api.get(goleador_limpio, 0) + 1
+        
+        for participante, lista_futbolistas in porra_futbolistas.items():
+            diccionario_jugador = {}
+            for nombre_porra in lista_futbolistas:
+                goles = 0
+                busqueda_completa = nombre_porra.lower().replace('á','a').replace('é','e').replace('í','i').replace('ó','o').replace('ú','u')
+                apellido = busqueda_completa.split()[-1] 
+                
+                for nombre_api, cantidad_goles in mapeo_goles_api.items():
+                    if (apellido in nombre_api) or (nombre_api in busqueda_completa) or (busqueda_completa[:4] in nombre_api):
+                        goles = cantidad_goles
+                        break
+                diccionario_jugador[nombre_porra] = goles
+            puntos_en_vivo[participante] = diccionario_jugador
+    except:
+        return {j: {f: 0 for f in de_jug} for j, de_jug in porra_futbolistas.items()}
+    return puntos_en_vivo
 
-# Cálculo del día de hoy
+
+@st.cache_data(ttl=3600)  # Cuotas: caché de 1 hora para ahorrar cuota de la API gratuita
+def obtener_probabilidades_apuestas_live():
+    """Obtiene las cuotas de 'Ganador del Mundial' vía The Odds API y calcula probabilidades"""
+    todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
+    # Inicializamos todas las rondas basadas en la probabilidad matemática de ganar el torneo
+    probabilidades = {eq: {'octavos': 0.5, 'cuartos': 0.25, 'semis': 0.12, 'final': 0.06, 'ganador': 0.02} for eq in todos_equipos}
+    
+    if ODDS_API_KEY == "TU_CLAVE_DE_PRUEBA_SI_NO_HAY_SECRETS":
+        return probabilidades # Devuelve modelo base matemático si no hay clave armada
+
+    try:
+        # Petición al mercado de "Ganador Final" (Outrights) de la Copa del Mundo
+        url = f"https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=outrights"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                outcomes = data[0].get('bookmakers', [{}])[0].get('markets', [{}])[0].get('outcomes', [])
+                
+                for outcome in outcomes:
+                    nombre_ingles = outcome.get('name')
+                    cuota = float(outcome.get('price', 100))
+                    
+                    # Traducimos el equipo al nombre en español de tu porra
+                    nombre_espanol = traductor_paises.get(nombre_ingles, nombre_ingles)
+                    
+                    if nombre_espanol in probabilidades:
+                        prob_ganar = 1 / cuota
+                        # Escalamiento dinámico proporcional para simular las rondas previas de forma matemática limpia
+                        probabilidades[nombre_espanol] = {
+                            'octavos': min(prob_ganar * 5.5, 0.95),
+                            'cuartos': min(prob_ganar * 3.5, 0.75),
+                            'semis': min(prob_ganar * 2.2, 0.50),
+                            'final': min(prob_ganar * 1.5, 0.25),
+                            'ganador': prob_ganar
+                        }
+    except:
+        pass # Si falla la API de cuotas, se usan los pesos proporcionales por defecto de la porra
+    return probabilidades
+
+# --- PROCESAMIENTO GENERAL ---
+with st.spinner("⚽ Actualizando goles y cuotas del Mundial en vivo..."):
+    goles_actualizados = obtener_goles_futbolistas_live()
+    probabilidades_live = obtener_probabilidades_apuestas_live()
+
 filas_hoy = []
 fecha_hoy = datetime.now().strftime('%Y-%m-%d')
 
 for jugador, equipos in porra.items():
-    # 1. Puntos esperados procedentes del mercado de selecciones
+    # Cálculo automático de puntos esperados según las cuotas en vivo de la API
     puntos_selecciones = sum([
-        (10 * probabilidades[e]['octavos'] + 
-         12 * probabilidades[e]['cuartos'] + 
-         15 * probabilidades[e]['semis'] + 
-         18 * probabilidades[e]['final'] + 
-         20 * probabilidades[e]['ganador']) for e in equipos
+        (10 * probabilidades_live[e]['octavos'] + 
+         12 * probabilidades_live[e]['cuartos'] + 
+         15 * probabilidades_live[e]['semis'] + 
+         18 * probabilidades_live[e]['final'] + 
+         20 * probabilidades_live[e]['ganador']) for e in equipos
     ])
     
-    # 2. Sumamos de forma directa los puntos obtenidos por los futbolistas marcados
-    puntos_bonus_futbolistas = puntos_futbolistas_actuales.get(jugador, 0)
+    # Suma de goles de la API de OpenLigaDB
+    datos_f = goles_actualizados.get(jugador, {})
+    puntos_bonus_futbolistas = sum(datos_f.values())
+    
     puntos_totales = puntos_selecciones + puntos_bonus_futbolistas
     
-    # Formateo visual de selecciones
     string_equipos_banderas = ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos])
-    
-    # Formateo visual de futbolistas asignados a cada participante
-    datos_f = porra_futbolistas.get(jugador, [])
-    if isinstance(datos_f, dict):
-        string_futbolistas = ", ".join([f"{f} ({pts})" for f, pts in datos_f.items()])
-    else:
-        string_futbolistas = ", ".join(datos_f)
+    string_futbolistas = ", ".join([f"{f} ({gols} ⚽)" for f, gols in datos_f.items()])
         
     filas_hoy.append({
         "Fecha": fecha_hoy, 
@@ -128,9 +177,9 @@ df_hoy = pd.DataFrame(filas_hoy)
 total_puntos = df_hoy["Puntos Esperados"].sum()
 df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
 
-# 🔄 INTENTAR LEER EL HISTÓRICO DESDE GOOGLE SHEETS
+# --- SINCRONIZACIÓN DEL HISTÓRICO EN GOOGLE SHEETS ---
 try:
-    df_hist_sheets = pd.read_csv(URL_SHEETS)
+    df_hist_sheets = pd.read_csv(URL_HISTORICO)
     if "Puntos" in df_hist_sheets.columns:
         df_hist_sheets = df_hist_sheets.rename(columns={"Puntos": "Puntos Esperados"})
     df_hist = pd.concat([df_hist_sheets, df_hoy], ignore_index=True)
@@ -140,21 +189,20 @@ except:
 df_hist = df_hist.drop_duplicates(subset=['Fecha', 'Jugador'], keep='last')
 df_hist = df_hist.sort_values(by="Fecha")
 
-# --- DISEÑO DE LA WEB (INTERFAZ) ---
+# --- INTERFAZ GRÁFICA DE STREAMLIT ---
 col1, col2 = st.columns([1.2, 0.8])
 with col1:
-    st.subheader("📊 Clasificación Actual (Puntos Esperados)")
+    st.subheader("📊 Clasificación General de la Porra")
     df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
 with col2:
-    st.subheader("📈 Gráfico de Puntos Esperados Hoy")
-    fig_barras = px.bar(df_mostrar, x="Jugador", y="Puntos Esperados", color="Jugador", text_auto=True,
-                        labels={"Puntos Esperados": "Puntos Esperados"})
+    st.subheader("📈 Proyección de Puntos")
+    fig_barras = px.bar(df_mostrar, x="Jugador", y="Puntos Esperados", color="Jugador", text_auto=True)
     st.plotly_chart(fig_barras, use_container_width=True)
 
 st.markdown("---")
-st.subheader("⏳ Evolución Temporal de la Porra")
+st.subheader("⏳ Evolución Temporal y Tendencia")
 fig_lineas = px.line(df_hist, x="Fecha", y="Probabilidad (%)", color="Jugador", markers=True)
 fig_lineas.update_xaxes(type='category')
 st.plotly_chart(fig_lineas, use_container_width=True)

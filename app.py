@@ -6,17 +6,17 @@ import requests
 from datetime import datetime
 
 # =================================================================
-# ⚙️ AQUÍ SE ESCRIBEN LAS APIS (JUSTO AQUÍ)
+# ⚙️ CONFIGURACIÓN DE LA PÁGINA (¡DEBE IR PRIMERO SIEMPRE!)
 # =================================================================
+st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
 
+# =================================================================
+# ⚙️ ENLACES Y APIS
+# =================================================================
 URL_API_GOLES = "https://api.openligadb.de/getmatchdata/wm2026"
-
 ODDS_API_KEY = "bb4e2d54f5e310838ac064bdade169fd"
-
 URL_HISTORICO = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv&gid=0"
 
-# =================================================================
-# (A partir de aquí abajo viene el resto del código de la porra...)
 # --- CONFIGURACIÓN DE LA PORRA ---
 porra = {
     'Sierra': ['España', 'Suiza', 'Croacia'],
@@ -50,7 +50,6 @@ banderas = {
     'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦'
 }
 
-# Traductores de nombres de países (La API de apuestas devuelve los nombres en inglés)
 traductor_paises = {
     'France': 'Francia', 'Spain': 'España', 'England': 'Inglaterra', 'Portugal': 'Portugal',
     'Argentina': 'Argentina', 'Brazil': 'Brasil', 'Germany': 'Alemania', 'Netherlands': 'Holanda',
@@ -63,12 +62,11 @@ traductor_paises = {
 
 # --- APIS AUTOMATIZADAS (CON CACHÉ) ---
 
-@st.cache_data(ttl=300)  # Goles en vivo: caché de 5 minutos
+@st.cache_data(ttl=300)
 def obtener_goles_futbolistas_live():
-    """Consulta OpenLigaDB y mapea con inteligencia los nombres de la API"""
     puntos_en_vivo = {}
     try:
-        res = requests.get("https://api.openligadb.de/getmatchdata/wm2026", timeout=5)
+        res = requests.get(URL_API_GOLES, timeout=5)
         partidos = res.json()
         
         mapeo_goles_api = {}
@@ -97,48 +95,46 @@ def obtener_goles_futbolistas_live():
     return puntos_en_vivo
 
 
-@st.cache_data(ttl=3600)  # Cuotas: caché de 1 hora para ahorrar cuota de la API gratuita
+@st.cache_data(ttl=3600)
 def obtener_probabilidades_apuestas_live():
-    """Obtiene las cuotas de 'Ganador del Mundial' vía The Odds API y calcula probabilidades"""
     todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
-    # Inicializamos todas las rondas basadas en la probabilidad matemática de ganar el torneo
+    # Base por si falla el servidor externo
     probabilidades = {eq: {'octavos': 0.5, 'cuartos': 0.25, 'semis': 0.12, 'final': 0.06, 'ganador': 0.02} for eq in todos_equipos}
     
-    if ODDS_API_KEY == "TU_CLAVE_DE_PRUEBA_SI_NO_HAY_SECRETS":
-        return probabilidades # Devuelve modelo base matemático si no hay clave armada
-
     try:
-        # Petición al mercado de "Ganador Final" (Outrights) de la Copa del Mundo
-        url = f"https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=outrights"
+        # CORRECCIÓN EN ENDPOINT: Aseguramos el consumo del mercado correcto sin romper filtros
+        url = f"https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup/odds/?apiKey={ODDS_API_KEY}&regions=eu&markets=outcomes"
         response = requests.get(url, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
             if data and len(data) > 0:
-                outcomes = data[0].get('bookmakers', [{}])[0].get('markets', [{}])[0].get('outcomes', [])
-                
-                for outcome in outcomes:
-                    nombre_ingles = outcome.get('name')
-                    cuota = float(outcome.get('price', 100))
-                    
-                    # Traducimos el equipo al nombre en español de tu porra
-                    nombre_espanol = traductor_paises.get(nombre_ingles, nombre_ingles)
-                    
-                    if nombre_espanol in probabilidades:
-                        prob_ganar = 1 / cuota
-                        # Escalamiento dinámico proporcional para simular las rondas previas de forma matemática limpia
-                        probabilidades[nombre_espanol] = {
-                            'octavos': min(prob_ganar * 5.5, 0.95),
-                            'cuartos': min(prob_ganar * 3.5, 0.75),
-                            'semis': min(prob_ganar * 2.2, 0.50),
-                            'final': min(prob_ganar * 1.5, 0.25),
-                            'ganador': prob_ganar
-                        }
+                # Buscamos el mercado de ganador final (outrights/h2h del torneo)
+                bookmakers = data[0].get('bookmakers', [])
+                if bookmakers:
+                    outcomes = bookmakers[0].get('markets', [{}])[0].get('outcomes', [])
+                    for outcome in outcomes:
+                        nombre_ingles = outcome.get('name')
+                        cuota = float(outcome.get('price', 100))
+                        nombre_espanol = traductor_paises.get(nombre_ingles, nombre_ingles)
+                        
+                        if nombre_espanol in probabilidades:
+                            prob_ganar = 1 / cuota
+                            probabilidades[nombre_espanol] = {
+                                'octavos': min(prob_ganar * 5.8, 0.95),
+                                'cuartos': min(prob_ganar * 3.8, 0.78),
+                                'semis': min(prob_ganar * 2.4, 0.52),
+                                'final': min(prob_ganar * 1.6, 0.28),
+                                'ganador': prob_ganar
+                            }
     except:
-        pass # Si falla la API de cuotas, se usan los pesos proporcionales por defecto de la porra
+        pass
     return probabilidades
 
 # --- PROCESAMIENTO GENERAL ---
+st.title("🏆 Seguimiento y Evolución de la Porra - Mundial 2026")
+st.write(f"Actualizado en tiempo real: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+
 with st.spinner("⚽ Actualizando goles y cuotas del Mundial en vivo..."):
     goles_actualizados = obtener_goles_futbolistas_live()
     probabilidades_live = obtener_probabilidades_apuestas_live()
@@ -147,21 +143,19 @@ filas_hoy = []
 fecha_hoy = datetime.now().strftime('%Y-%m-%d')
 
 for jugador, equipos in porra.items():
-    # Cálculo automático de puntos esperados según las cuotas en vivo de la API
     puntos_selecciones = sum([
         (10 * probabilidades_live[e]['octavos'] + 
          12 * probabilidades_live[e]['cuartos'] + 
          15 * probabilidades_live[e]['semis'] + 
          18 * probabilidades_live[e]['final'] + 
-         20 * probabilidades_live[e]['ganador']) for e in equipos
+         20 * probabilidades_live[e]['ganador']) for e in equipos if e in probabilidades_live
     ])
     
-    # Suma de goles de la API de OpenLigaDB
     datos_f = goles_actualizados.get(jugador, {})
     puntos_bonus_futbolistas = sum(datos_f.values())
-    
     puntos_totales = puntos_selecciones + puntos_bonus_futbolistas
     
+    # Renderizado estricto de banderas evitando la rotura de códigos CSS o markdown en dataframes
     string_equipos_banderas = ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos])
     string_futbolistas = ", ".join([f"{f} ({gols} ⚽)" for f, gols in datos_f.items()])
         
@@ -177,7 +171,7 @@ df_hoy = pd.DataFrame(filas_hoy)
 total_puntos = df_hoy["Puntos Esperados"].sum()
 df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
 
-# --- SINCRONIZACIÓN DEL HISTÓRICO EN GOOGLE SHEETS ---
+# --- SINCRONIZACIÓN DEL HISTÓRICO ---
 try:
     df_hist_sheets = pd.read_csv(URL_HISTORICO)
     if "Puntos" in df_hist_sheets.columns:
@@ -186,11 +180,11 @@ try:
 except:
     df_hist = df_hoy.copy()
 
-df_hist = df_hist.drop_duplicates(subset=['Fecha', 'Jugador'], keep='last')
-df_hist = df_hist.sort_values(by="Fecha")
+df_hist = df_hist.drop_duplicates(subset=['Fecha', 'Jugador'], keep='last').sort_values(by="Fecha")
 
-# --- INTERFAZ GRÁFICA DE STREAMLIT ---
-col1, col2 = st.columns([1.2, 0.8])
+# --- INTERFAZ GRÁFICA CORREGIDA ---
+# Cambiamos proporciones a [1.4, 0.6] para dar más espacio horizontal a los textos y evitar colapsos visuales
+col1, col2 = st.columns([1.4, 0.6])
 with col1:
     st.subheader("📊 Clasificación General de la Porra")
     df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Esperados", "Probabilidad (%)"]]

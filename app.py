@@ -8,11 +8,10 @@ st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
 st.title("🏆 Seguimiento y Evolución de la Porra")
 st.write(f"Actualizado al: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
-# ⚠️ PEGA AQUÍ TU URL DE GOOGLE SHEETS EN FORMATO EXPORTACIÓN CSV ⚠️
-#URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv"
+# ⚠️ TU URL DE GOOGLE SHEETS EN FORMATO EXPORTACIÓN CSV ⚠️
 URL_SHEETS = "https://docs.google.com/spreadsheets/d/1mmRhevyqOCuJQBcsYNXHGIUbnSJPaSR2zLuSPjvTfQg/export?format=csv&gid=0"
 
-# Participantes oficiales
+# Participantes oficiales (Selecciones)
 porra = {
     'Sierra': ['España', 'Suiza', 'Croacia'],
     'Joaquín': ['Portugal', 'Marruecos', 'EE.UU.'],
@@ -24,7 +23,27 @@ porra = {
     'Juan': ['Canadá', 'Turquía', 'Austria', 'Escocia', 'Bosnia and Herzegovina']
 }
 
-# Diccionario de banderas corregido e indexado
+# ⚽ NUEVA CAPA: Futbolistas elegidos y sus puntos/goles actuales aportados
+porra_futbolistas = {
+    'Sierra': {'Kane': 0, 'Julián Álvarez': 0},
+    'Joaquín': {'Messi': 0, 'Olise': 0},
+    'Ejkar': {'Lautaro': 0, 'Raphinha': 0},
+    'Vecina': {'Havertz': 2, 'Lamine Yamal': 0},
+    'Telenti': {'Endrick': 0, 'Ramos': 0},
+    'Miguel Ángel': {'Haaland': 0, 'Embolo': 1},
+    'Mírete': ['Oyarzabal', 'El Bicho'], # Puedes usar lista si todos son 0, o dict
+    'Juan': {'Mbappé': 0, 'Vinicius': 1}
+}
+
+# Normalizamos el formato de los futbolistas para el conteo de puntos actuales
+puntos_futbolistas_actuales = {}
+for jugador, datos in porra_futbolistas.items():
+    if isinstance(datos, dict):
+        puntos_futbolistas_actuales[jugador] = sum(datos.values())
+    else:
+        puntos_futbolistas_actuales[jugador] = 0 # Si es lista, asume 0 puntos por ahora
+
+# Diccionario de banderas
 banderas = {
     'Francia': '🇫🇷', 'España': '🇪🇸', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹', 
     'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Alemania': '🇩🇪', 'Holanda': '🇳🇱', 
@@ -45,7 +64,7 @@ banderas = {
     'Fiyi': '🇫🇯', 'Cook Islands': '🇨🇰', 'Tahití': '🇵🇫'
 }
 
-# 🗓️ NUEVAS CUOTAS ACTUALIZADAS
+# 🗓️ CUOTAS ACTUALIZADAS
 datos_cuotas = {
     'ganador': """Francia 5.50 España 5.50 Inglaterra 8.00 Portugal 8.00 Brasil 10.00 Argentina 10.00 Alemania 15.00 Holanda 19.00 Bélgica 34.00 Noruega 34.00 EE.UU. 34.00 Colombia 41.00 Marruecos 41.00 México 51.00 Japón 51.00 Uruguay 67.00 Suiza 67.00 Croacia 81.00 Senegal 81.00 Suecia 81.00 Ecuador 101.00 Australia 101.00 Costa de Marfil 101.00 Turquía 126.00 Canadá 151.00 Escocia 151.00 Austria 151.00 Corea del Sur 201.00 Bosnia and Herzegovina 251.00 Argelia 251.00 Egipto 251.00 Paraguay 301.00 República Checa 301.00 Ghana 501.00 Irán 501.00 Túnez 751.00 RD Congo 751.00 Panamá 1001.00 Sudáfrica 1001.00 Uzbekistán 1001.00 Arabia Saudí 1001.00 Catar 1001.00 Nueva Zelanda 1001.00 Jordan 1001.00 Cabo Verde 1001.00 Iraq 1001.00 Haití 2501.00 Curazao 2501.00""",
     
@@ -74,8 +93,8 @@ filas_hoy = []
 fecha_hoy = datetime.now().strftime('%Y-%m-%d')
 
 for jugador, equipos in porra.items():
-    # Cálculo con la ronda de Semis incluida
-    puntos_totales = sum([
+    # 1. Puntos esperados procedentes del mercado de selecciones
+    puntos_selecciones = sum([
         (10 * probabilidades[e]['octavos'] + 
          12 * probabilidades[e]['cuartos'] + 
          15 * probabilidades[e]['semis'] + 
@@ -83,9 +102,27 @@ for jugador, equipos in porra.items():
          20 * probabilidades[e]['ganador']) for e in equipos
     ])
     
+    # 2. Sumamos de forma directa los puntos obtenidos por los futbolistas marcados
+    puntos_bonus_futbolistas = puntos_futbolistas_actuales.get(jugador, 0)
+    puntos_totales = puntos_selecciones + puntos_bonus_futbolistas
+    
+    # Formateo visual de selecciones
     string_equipos_banderas = ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos])
-    # Se renombra la clave a 'Puntos Esperados'
-    filas_hoy.append({"Fecha": fecha_hoy, "Jugador": jugador, "Equipos": string_equipos_banderas, "Puntos Esperados": round(puntos_totales, 2)})
+    
+    # Formateo visual de futbolistas asignados a cada participante
+    datos_f = porra_futbolistas.get(jugador, [])
+    if isinstance(datos_f, dict):
+        string_futbolistas = ", ".join([f"{f} ({pts})" for f, pts in datos_f.items()])
+    else:
+        string_futbolistas = ", ".join(datos_f)
+        
+    filas_hoy.append({
+        "Fecha": fecha_hoy, 
+        "Jugador": jugador, 
+        "Equipos": string_equipos_banderas, 
+        "Futbolistas": string_futbolistas,
+        "Puntos Esperados": round(puntos_totales, 2)
+    })
 
 df_hoy = pd.DataFrame(filas_hoy)
 total_puntos = df_hoy["Puntos Esperados"].sum()
@@ -94,7 +131,6 @@ df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos i
 # 🔄 INTENTAR LEER EL HISTÓRICO DESDE GOOGLE SHEETS
 try:
     df_hist_sheets = pd.read_csv(URL_SHEETS)
-    # Si el CSV antiguo guardaba la columna como "Puntos", la renombramos para evitar conflictos
     if "Puntos" in df_hist_sheets.columns:
         df_hist_sheets = df_hist_sheets.rename(columns={"Puntos": "Puntos Esperados"})
     df_hist = pd.concat([df_hist_sheets, df_hoy], ignore_index=True)
@@ -105,10 +141,10 @@ df_hist = df_hist.drop_duplicates(subset=['Fecha', 'Jugador'], keep='last')
 df_hist = df_hist.sort_values(by="Fecha")
 
 # --- DISEÑO DE LA WEB (INTERFAZ) ---
-col1, col2 = st.columns([1, 1])
+col1, col2 = st.columns([1.2, 0.8])
 with col1:
-    st.subheader("📊 Clasificación Actual")
-    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Puntos Esperados", "Probabilidad (%)"]]
+    st.subheader("📊 Clasificación Actual (Puntos Esperados)")
+    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
 with col2:

@@ -44,7 +44,7 @@ banderas = {
     'Fiyi': '🇫🇯', 'Cook Islands': '🇨🇰', 'Tahití': '🇵🇫'
 }
 
-# 🗓️ NUEVAS CUOTAS ACTUALIZADAS (Datos de las últimas capturas procesadas)
+# 🗓️ NUEVAS CUOTAS ACTUALIZADAS
 datos_cuotas = {
     'ganador': """Francia 5.50 España 5.50 Inglaterra 8.00 Portugal 8.00 Brasil 10.00 Argentina 10.00 Alemania 15.00 Holanda 19.00 Bélgica 34.00 Noruega 34.00 EE.UU. 34.00 Colombia 41.00 Marruecos 41.00 México 51.00 Japón 51.00 Uruguay 67.00 Suiza 67.00 Croacia 81.00 Senegal 81.00 Suecia 81.00 Ecuador 101.00 Australia 101.00 Costa de Marfil 101.00 Turquía 126.00 Canadá 151.00 Escocia 151.00 Austria 151.00 Corea del Sur 201.00 Bosnia and Herzegovina 251.00 Argelia 251.00 Egipto 251.00 Paraguay 301.00 República Checa 301.00 Ghana 501.00 Irán 501.00 Túnez 751.00 RD Congo 751.00 Panamá 1001.00 Sudáfrica 1001.00 Uzbekistán 1001.00 Arabia Saudí 1001.00 Catar 1001.00 Nueva Zelanda 1001.00 Jordan 1001.00 Cabo Verde 1001.00 Iraq 1001.00 Haití 2501.00 Curazao 2501.00""",
     
@@ -59,7 +59,6 @@ datos_cuotas = {
 
 # --- PROCESAMIENTO MATEMÁTICO ---
 todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
-# Añadida la ronda 'semis' a la inicialización de probabilidades
 probabilidades = {eq: {'octavos': 0.0, 'cuartos': 0.0, 'semis': 0.0, 'final': 0.0, 'ganador': 0.0} for eq in todos_equipos}
 
 for ronda, texto in datos_cuotas.items():
@@ -74,7 +73,7 @@ filas_hoy = []
 fecha_hoy = datetime.now().strftime('%Y-%m-%d')
 
 for jugador, equipos in porra.items():
-    # Modificado el sumatorio incluyendo los 15 puntos correspondientes a la ronda de Semis
+    # Cálculo con la ronda de Semis incluida
     puntos_totales = sum([
         (10 * probabilidades[e]['octavos'] + 
          12 * probabilidades[e]['cuartos'] + 
@@ -83,17 +82,20 @@ for jugador, equipos in porra.items():
          20 * probabilidades[e]['ganador']) for e in equipos
     ])
     
-    # Creamos un string visual combinando el nombre del equipo con su emoji de bandera
     string_equipos_banderas = ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos])
+    # Se renombra la clave a 'Puntos Esperados'
     filas_hoy.append({"Fecha": fecha_hoy, "Jugador": jugador, "Equipos": string_equipos_banderas, "Puntos Esperados": round(puntos_totales, 2)})
 
 df_hoy = pd.DataFrame(filas_hoy)
 total_puntos = df_hoy["Puntos Esperados"].sum()
 df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
 
-# 🔄 INTENTAR LEER EL HISTÓRICO DESDE TU GOOGLE SHEETS
+# 🔄 INTENTAR LEER EL HISTÓRICO DESDE GOOGLE SHEETS
 try:
     df_hist_sheets = pd.read_csv(URL_SHEETS)
+    # Si el CSV antiguo guardaba la columna como "Puntos", la renombramos para evitar conflictos
+    if "Puntos" in df_hist_sheets.columns:
+        df_hist_sheets = df_hist_sheets.rename(columns={"Puntos": "Puntos Esperados"})
     df_hist = pd.concat([df_hist_sheets, df_hoy], ignore_index=True)
 except:
     df_hist = df_hoy.copy()
@@ -105,12 +107,13 @@ df_hist = df_hist.sort_values(by="Fecha")
 col1, col2 = st.columns([1, 1])
 with col1:
     st.subheader("📊 Clasificación Actual")
-    df_mostrar = df_hoy.sort_values(by="Puntos", ascending=False)[["Jugador", "Equipos", "Puntos Esperados", "Probabilidad (%)"]]
+    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
 with col2:
     st.subheader("📈 Gráfico de Puntos Esperados Hoy")
-    fig_barras = px.bar(df_mostrar, x="Jugador", y="Puntos Esperados", color="Jugador", text_auto=True)
+    fig_barras = px.bar(df_mostrar, x="Jugador", y="Puntos Esperados", color="Jugador", text_auto=True,
+                        labels={"Puntos Esperados": "Puntos Esperados"})
     st.plotly_chart(fig_barras, use_container_width=True)
 
 st.markdown("---")

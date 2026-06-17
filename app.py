@@ -1,9 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import requests
-import json
-import os
 from datetime import datetime
 
 # Configuración de la interfaz de Streamlit
@@ -26,26 +23,27 @@ porra = {
 
 porra_futbolistas = {
     'Sierra': {'Kane': 0, 'Julián Álvarez': 0},
-    'Joaquín': {'Messi': 0, 'Olise': 0},
+    'Joaquín': {'Messi': 3, 'Olise': 0},
     'Ejkar': {'Lautaro': 0, 'Raphinha': 0},
     'Vecina': {'Havertz': 2, 'Lamine Yamal': 0},
     'Telenti': {'Endrick': 0, 'Ramos': 0},
-    'Miguel Ángel': {'Haaland': 0, 'Embolo': 1},
+    'Miguel Ángel': {'Haaland': 2, 'Embolo': 1},
     'Mírete': {'Oyarzabal': 0, 'El Bicho': 0}, 
-    'Juan': {'Mbappé': 0, 'Vinicius': 1}
+    'Juan': {'Mbappé': 2, 'Vinicius': 1}
 }
 
 puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos, dict) else 0 
                                for jugador, datos in porra_futbolistas.items()}
 
-traduccion_api = {
-    'Francia': 'France', 'España': 'Spain', 'Inglaterra': 'England', 'Portugal': 'Portugal',
-    'Argentina': 'Argentina', 'Brasil': 'Brazil', 'Alemania': 'Germany', 'Holanda': 'Netherlands',
-    'Noruega': 'Norway', 'Bélgica': 'Belgium', 'Marruecos': 'Morocco', 'Colombia': 'Colombia',
-    'Japón': 'Japan', 'México': 'Mexico', 'EE.UU.': 'USA', 'Uruguay': 'Uruguay',
-    'Croacia': 'Croatia', 'Suiza': 'Switzerland', 'Ecuador': 'Ecuador', 'Austria': 'Austria',
-    'Turquía': 'Turkey', 'Senegal': 'Senegal', 'Escocia': 'Scotland', 'Canadá': 'Canada',
-    'Costa de Marfil': 'Ivory Coast', 'Bosnia and Herzegovina': 'Bosnia and Herzegovina'
+# Diccionario de traducción directa (Mapea el nombre de la porra con los nombres de las imágenes)
+traduccion_interna = {
+    'Francia': 'Francia', 'España': 'España', 'Inglaterra': 'Inglaterra', 'Portugal': 'Portugal',
+    'Argentina': 'Argentina', 'Brasil': 'Brasil', 'Alemania': 'Alemania', 'Holanda': 'Países Bajos',
+    'Noruega': 'Noruega', 'Bélgica': 'Bélgica', 'Marruecos': 'Marruecos', 'Colombia': 'Colombia',
+    'Japón': 'Japón', 'México': 'México', 'EE.UU.': 'EE. UU.', 'Uruguay': 'Uruguay',
+    'Croacia': 'Croacia', 'Suiza': 'Suiza', 'Ecuador': 'Ecuador', 'Austria': 'Austria',
+    'Turquía': 'Turquía', 'Senegal': 'Senegal', 'Escocia': 'Escocia', 'Canadá': 'Canadá',
+    'Costa de Marfil': 'Costa de Marfil', 'Bosnia and Herzegovina': 'Bosnia y Herzegovina'
 }
 
 banderas = {
@@ -58,106 +56,64 @@ banderas = {
     'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦'
 }
 
-# Archivo local donde se guardará la memoria física de las cuotas
-ARCHIVO_MEMORIA = "ultimas_cuotas.json"
+# --- TABLAS DE CUOTAS MANUALES (17/06) ---
+cuotas_ganador = {
+    'Francia': 4.75, 'España': 6.00, 'Inglaterra': 8.00, 'Portugal': 8.00, 'Argentina': 9.00, 'Brasil': 10.00,
+    'Alemania': 13.00, 'Países Bajos': 19.00, 'Noruega': 26.00, 'EE. UU.': 34.00, 'Marruecos': 34.00, 'Bélgica': 41.00,
+    'Colombia': 41.00, 'Japón': 51.00, 'Uruguay': 67.00, 'México': 67.00, 'Suiza': 67.00, 'Croacia': 81.00,
+    'Ecuador': 101.00, 'Austria': 101.00, 'Costa de Marfil': 101.00, 'Senegal': 101.00, 'Turquía': 126.00,
+    'Canadá': 151.00, 'Escocia': 151.00, 'Bosnia y Herzegovina': 251.00
+}
 
-# --- LÓGICA DE PERSISTENCIA Y EXTRACCIÓN (THE ODDS API) ---
+cuotas_final = {
+    'Francia': 3.25, 'España': 3.50, 'Inglaterra': 4.00, 'Portugal': 4.50, 'Argentina': 5.00, 'Brasil': 5.50,
+    'Alemania': 6.50, 'Países Bajos': 9.00, 'Noruega': 11.00, 'Bélgica': 17.00, 'Colombia': 17.00, 'EE. UU.': 17.00,
+    'México': 17.00, 'Marruecos': 17.00, 'Japón': 23.00, 'Uruguay': 26.00, 'Suiza': 26.00, 'Croacia': 29.00,
+    'Ecuador': 34.00, 'Austria': 34.00, 'Canadá': 51.00, 'Senegal': 51.00, 'Turquía': 51.00, 'Escocia': 81.00,
+    'Costa de Marfil': 81.00, 'Bosnia y Herzegovina': 101.00
+}
 
-def guardar_en_memoria_local(datos):
-    """Guarda físicamente las cuotas en un archivo JSON en el servidor."""
-    try:
-        with open(ARCHIVO_MEMORIA, "w") as f:
-            json.dump(datos, f)
-    except Exception:
-        pass
+cuotas_semis = {
+    'Francia': 2.20, 'España': 2.40, 'Inglaterra': 2.75, 'Argentina': 2.90, 'Portugal': 3.00, 'Brasil': 3.50,
+    'Alemania': 4.00, 'Países Bajos': 5.00, 'Noruega': 6.00, 'Bélgica': 6.50, 'Colombia': 7.00, 'EE. UU.': 7.00,
+    'Marruecos': 7.50, 'México': 8.00, 'Japón': 10.00, 'Croacia': 11.00, 'Uruguay': 12.00, 'Suiza': 13.00,
+    'Austria': 15.00, 'Senegal': 15.00, 'Ecuador': 17.00, 'Canadá': 17.00, 'Costa de Marfil': 17.00, 'Turquía': 21.00,
+    'Escocia': 23.00, 'Bosnia y Herzegovina': 41.00
+}
 
-def leer_de_memoria_local():
-    """Recupera el último JSON de cuotas guardado si existe."""
-    if os.path.exists(ARCHIVO_MEMORIA):
-        try:
-            with open(ARCHIVO_MEMORIA, "r") as f:
-                return json.load(f)
-        except Exception:
-            return None
-    return None
+cuotas_cuartos = {
+    'Francia': 1.53, 'España': 1.65, 'Argentina': 1.75, 'Inglaterra': 1.80, 'Portugal': 1.90, 'Brasil': 2.10,
+    'Alemania': 2.40, 'Países Bajos': 2.75, 'Noruega': 2.75, 'EE. UU.': 3.00, 'Bélgica': 3.00, 'México': 3.50,
+    'Colombia': 3.75, 'Marruecos': 3.75, 'Japón': 4.50, 'Suiza': 4.50, 'Uruguay': 5.00, 'Croacia': 5.50,
+    'Canadá': 6.00, 'Austria': 6.00, 'Costa de Marfil': 7.00, 'Ecuador': 7.00, 'Senegal': 8.00, 'Escocia': 9.00,
+    'Turquía': 9.00, 'Bosnia y Herzegovina': 11.00
+}
 
-@st.cache_data(ttl=3600)
-def obtener_cuotas_sistema():
-    """Consulta la API, calcula las rondas, actualiza la memoria y gestiona fallos."""
-    API_KEY = "bb4e2d54f5e310838ac064bdade169fd"
-    SPORT_KEY = "soccer_fifa_world_cup_winner"
-    url = f"https://api.the-odds-api.com/v4/sports/{SPORT_KEY}/odds/"
-    params = {
-        'apiKey': API_KEY,
-        'regions': 'eu',
-        'markets': 'outrights',
-        'oddsFormat': 'decimal'
-    }
-    
-    datos_completos = {'ganador': {}, 'final': {}, 'semis': {}, 'cuartos': {}, 'octavos': {}}
-    
-    try:
-        response = requests.get(url, params=params)
-        
-        # Si la API responde correctamente (Créditos disponibles)
-        if response.status_code == 200:
-            data = response.json()
-            if data and len(data) > 0:
-                outcomes = data[0]['bookmakers'][0]['markets'][0]['outcomes']
-                cuotas_ganador = {o['name']: float(o['price']) for o in outcomes}
-                
-                if cuotas_ganador:
-                    datos_completos['ganador'] = cuotas_ganador
-                    # Generación de las fases eliminatorias
-                    for equipo, cuota in cuotas_ganador.items():
-                        datos_completos['final'][equipo] = max(1.01, cuota * 0.6)
-                        datos_completos['semis'][equipo] = max(1.01, cuota * 0.4)
-                        datos_completos['cuartos'][equipo] = max(1.01, cuota * 0.25)
-                        datos_completos['octavos'][equipo] = max(1.01, cuota * 0.15)
-                    
-                    # 💾 GUARDAR EN MEMORIA: Actualizamos nuestro archivo de respaldo real
-                    guardar_en_memoria_local(datos_completos)
-                    return datos_completos, True
-                    
-        # Si llega aquí es porque la API dio error 429 (sin créditos), 401 u otros
-        memoria = leer_de_memoria_local()
-        if memoria:
-            return memoria, False
-        return None, False
-        
-    except Exception:
-        memoria = leer_de_memoria_local()
-        if memoria:
-            return memoria, False
-        return None, False
+cuotas_octavos = {
+    'Francia': 1.18, 'Argentina': 1.30, 'Inglaterra': 1.30, 'España': 1.30, 'Alemania': 1.40, 'Portugal': 1.40,
+    'Brasil': 1.44, 'Noruega': 1.57, 'Bélgica': 1.60, 'México': 1.61, 'EE. UU.': 1.61, 'Suiza': 1.80,
+    'Colombia': 1.90, 'Países Bajos': 1.90, 'Marruecos': 2.00, 'Canadá': 2.20, 'Japón': 2.37, 'Austria': 2.50,
+    'Costa de Marfil': 2.50, 'Croacia': 2.50, 'Uruguay': 2.75, 'Ecuador': 3.00, 'Escocia': 3.25,
+    'Bosnia y Herzegovina': 3.75, 'Senegal': 3.75, 'Turquía': 3.75
+}
 
-# --- PROCESAMIENTO DE PROBABILIDADES ---
-
+# --- PROCESAMIENTO DE PROBABILIDADES REALES ---
 todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
-probabilidades = {eq: {'octavos': 0.0, 'cuartos': 0.0, 'semis': 0.0, 'final': 0.0, 'ganador': 0.0} for eq in todos_equipos}
+probabilidades = {}
 
-# Solicitamos los datos al sistema inteligente de cuotas
-datos_cuotas, api_activa = obtener_cuotas_sistema()
-
-if datos_cuotas:
-    if not api_activa:
-        # Mensaje de advertencia si estamos tirando del archivo JSON de memoria
-        st.warning("⚠️ Los créditos de la API se han agotado. Se están mostrando las últimas cuotas reales extraídas de la memoria.")
-    
-    # Rellenamos la matriz de probabilidades
-    for ronda in ['octavos', 'cuartos', 'semis', 'final', 'ganador']:
-        cuotas_ronda = datos_cuotas.get(ronda, {})
-        for eq in todos_equipos:
-            nombre_ingles = traduccion_api.get(eq, eq)
-            cuota = cuotas_ronda.get(nombre_ingles, 1000.0)
-            probabilidades[eq][ronda] = 1 / float(cuota)
-else:
-    st.error("❌ No hay conexión con la API ni datos guardados en la memoria local para arrancar.")
+for eq in todos_equipos:
+    n = traduccion_interna.get(eq, eq)
+    probabilidades[eq] = {
+        'ganador': 1 / float(cuotas_ganador.get(n, 1000.0)),
+        'final': 1 / float(cuotas_final.get(n, 1000.0)),
+        'semis': 1 / float(cuotas_semis.get(n, 1000.0)),
+        'cuartos': 1 / float(cuotas_cuartos.get(n, 1000.0)),
+        'octavos': 1 / float(cuotas_octavos.get(n, 1000.0))
+    }
 
 # --- CÁLCULO DE PUNTOS ESPERADOS HOY ---
-
 filas_hoy = []
-fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+fecha_hoy = "2026-06-17"
 
 for jugador, equipos in porra.items():
     puntos_selecciones = sum([
@@ -182,7 +138,7 @@ df_hoy = pd.DataFrame(filas_hoy)
 total_puntos = df_hoy["Puntos Esperados"].sum()
 df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
 
-# --- HISTÓRICO FIJO ---
+# --- HISTÓRICO FIJO (Punto 1: 15 de Junio / Punto 2: Hoy 17 de Junio) ---
 datos_ayer = [
     {"Fecha": "2026-06-15", "Jugador": "Mírete", "Probabilidad (%)": 14.43},
     {"Fecha": "2026-06-15", "Jugador": "Sierra", "Probabilidad (%)": 13.80},

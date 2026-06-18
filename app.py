@@ -370,8 +370,8 @@ with col_sopa:
     components.html(html_game, height=660)
 
 with col_registro:
-    st.markdown("### 🏆 Canjear Código de Victoria")
-    st.write("Cuando la interfaz interactiva de la izquierda te dé el código secreto al hallar los 20, pégalo aquí abajo:")
+    st.markdown("### 🏆 Canjea tu Código de Victoria para registrar tu nombre en la lista. ¡BUEN JUAN A TODOS!")
+    st.write("Cuando se te dé el código secreto al hallar los 20 JUANES, pégalo aquí abajo:")
     
     codigo_verificador = st.text_input("Introduce el código de la sopa:", type="password")
     

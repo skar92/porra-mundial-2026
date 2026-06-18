@@ -240,7 +240,7 @@ html_game = f"""
 <div class="grid" id="soup-grid"></div>
 <div class="win-banner" id="win-banner">
     🎉 ¡BRUTAL! HAS CAZADO LOS 20 JUANES.<br>
-    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:3px 8px; border-radius:4px;">JUAN_MOUSE_MASTER_2026</span>
+    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:3px 8px; border-radius:4px;">ALABADOSEAJUAN!!</span>
 </div>
 
 <script>

@@ -132,14 +132,14 @@ st.plotly_chart(fig_lineas, use_container_width=True)
 
 
 # ==============================================================================
-# --- 🧩 SOPA DE LETRAS CON SELECCIÓN DE RATÓN (DRAG AND DROP) ---
+# --- 🧩 SOPA DE LETRAS OPTIMIZADA MÓVIL Y RATÓN (DRAG AND DROP) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🧩 Sopa de Letras Interactiva: Encuentra los 20 Juanes")
-st.write("Usa el **ratón** para hacer clic y arrastrar sobre las letras en cualquier dirección. Si encuentras un **JUAN** válido, quedará marcado en verde. ¡Completa los 20!")
+st.write("Usa el **dedo** o el **ratón** para arrastrar sobre las letras en cualquier dirección. Si encuentras un **JUAN**, quedará redondeado en verde.")
 
 @st.cache_data
-def generar_sopa_juan_v3():
+def generar_sopa_juan_v4():
     tam = 15
     grid = [['' for _ in range(tam)] for _ in range(tam)]
     word = "JUAN"
@@ -179,68 +179,72 @@ def generar_sopa_juan_v3():
                 grid[r][c] = random.choice(letras_relleno)
     return grid, juanes_coordenadas
 
-grid_sopa, lista_juanes = generar_sopa_juan_v3()
+grid_sopa, lista_juanes = generar_sopa_juan_v4()
 
-# Inyección de la Sopa Interactiva mediante HTML5 + JS Avanzado
 import streamlit.components.v1 as components
 
 html_game = f"""
 <!DOCTYPE html>
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
     body {{
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        margin: 0; padding: 10px;
+        margin: 0; padding: 5px;
         background-color: transparent;
         display: flex; flex-direction: column; align-items: center;
         user-select: none; -webkit-user-select: none;
     }}
     .header-box {{
-        font-size: 20px; font-weight: bold; margin-bottom: 15px;
+        font-size: 18px; font-weight: bold; margin-bottom: 12px;
         color: #2ecc71; background: rgba(46, 204, 113, 0.15);
-        padding: 10px 25px; border-radius: 30px; border: 1px solid rgba(46, 204, 113, 0.3);
+        padding: 8px 20px; border-radius: 30px; border: 1px solid rgba(46, 204, 113, 0.3);
+    }}
+    .grid-container {{
+        width: 100%; max-width: 440px; aspect-ratio: 1;
+        background: #1e1e24; padding: 8px; border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4); box-sizing: border-box;
     }}
     .grid {{
-        display: grid; grid-template-columns: repeat(15, 36px); grid-gap: 5px;
-        background: #1e1e24; padding: 12px; border-radius: 14px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.4); touch-action: none;
+        display: grid; grid-template-columns: repeat(15, 1fr); grid-gap: 3px;
+        width: 100%; height: 100%; touch-action: none;
     }}
     .cell {{
-        width: 36px; height: 36px; line-height: 36px; text-align: center;
-        font-weight: bold; font-family: 'Courier New', Courier, monospace; font-size: 19px;
-        color: #ecf0f1; background: #2c3e50; border-radius: 6px;
-        cursor: pointer; transition: background 0.15s, transform 0.1s;
+        aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+        font-weight: bold; font-family: 'Courier New', Courier, monospace; font-size: 4vw;
+        color: #ecf0f1; background: #2c3e50; border-radius: 4px;
+        cursor: pointer; transition: background 0.1s, transform 0.05s;
+    }}
+    @media (min-width: 450px) {{
+        .cell {{ font-size: 18px; }}
     }}
     .cell.dragging {{
         background: #3498db !important; color: #fff !important;
-        transform: scale(1.08); border-radius: 50%;
+        border-radius: 50%; transform: scale(1.05);
     }}
     .cell.found {{
         background: #2ecc71 !important; color: #fff !important;
-        border-radius: 50% !important; font-size: 20px;
-        box-shadow: 0 0 8px #2ecc71; animation: pop 0.3s ease;
+        border-radius: 50% !important;
+        box-shadow: 0 0 6px #2ecc71;
     }}
     .win-banner {{
-        display: none; margin-top: 20px; padding: 15px 30px;
+        display: none; margin-top: 15px; padding: 12px 20px;
         background: #27ae60; color: white; font-weight: bold;
-        border-radius: 10px; font-size: 18px; text-align: center;
-        box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
-    }}
-    @keyframes pop {{
-        0% {{ transform: scale(1); }}
-        50% {{ transform: scale(1.2); }}
-        100% {{ transform: scale(1); }}
+        border-radius: 10px; font-size: 15px; text-align: center;
+        box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); max-width: 420px;
     }}
 </style>
 </head>
 <body>
 
 <div class="header-box">🕵️‍♂️ Juanes Cazados: <span id="counter">0</span> / 20</div>
-<div class="grid" id="soup-grid"></div>
+<div class="grid-container">
+    <div class="grid" id="soup-grid"></div>
+</div>
 <div class="win-banner" id="win-banner">
     🎉 ¡BRUTAL! HAS CAZADO LOS 20 JUANES.<br>
-    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:3px 8px; border-radius:4px;">ALABADOSEAJUAN!!</span>
+    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:2px 6px; border-radius:4px;">ALABADOSEAJUAN!!</span>
 </div>
 
 <script>
@@ -249,11 +253,12 @@ html_game = f"""
     
     let isDragging = false;
     let startCell = null;
+    let currentEndCell = null;
     let foundIndexes = [];
     
     const gridContainer = document.getElementById('soup-grid');
     
-    // Crear el tablero visualmente
+    // Crear celdas
     for(let r=0; r<15; r++) {{
         for(let c=0; c<15; c++) {{
             const cell = document.createElement('div');
@@ -262,25 +267,74 @@ html_game = f"""
             cell.setAttribute('data-r', r);
             cell.setAttribute('data-c', c);
             cell.id = `c-${{r}}-${{c}}`;
-            
-            // Eventos de ratón y táctiles
-            cell.addEventListener('mousedown', (e) => startSelect(r, c));
-            cell.addEventListener('mouseenter', (e) => updateSelect(r, c));
             gridContainer.appendChild(cell);
         }}
     }}
     
-    window.addEventListener('mouseup', endSelect);
+    // CONTROL DE MOUSE (ESCRITORIO)
+    gridContainer.addEventListener('mousedown', (e) => {{
+        if(e.target.classList.contains('cell')) {{
+            isDragging = true;
+            startCell = getCoords(e.target);
+            currentEndCell = startCell;
+            highlightCells(startCell, startCell);
+        }}
+    }});
     
-    function startSelect(r, c) {{
-        isDragging = true;
-        startCell = {{r, c}};
-        highlightCells(startCell, startCell);
-    }}
-    
-    function updateSelect(r, c) {{
+    gridContainer.addEventListener('mousemove', (e) => {{
         if (!isDragging) return;
-        highlightCells(startCell, {{r, c}});
+        let el = document.elementFromPoint(e.clientX, e.clientY);
+        if(el && el.classList.contains('cell')) {{
+            let cellCoords = getCoords(el);
+            currentEndCell = cellCoords;
+            highlightCells(startCell, cellCoords);
+        }}
+    }});
+    
+    window.addEventListener('mouseup', () => {{
+        if (!isDragging) return;
+        isDragging = false;
+        checkWord(startCell, currentEndCell);
+        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
+    }});
+
+    // CONTROL TÁCTIL (MÓVILES - EVITA EL SCROLL)
+    gridContainer.addEventListener('touchstart', (e) => {{
+        let touch = e.touches[0];
+        let el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if(el && el.classList.contains('cell')) {{
+            e.preventDefault(); 
+            isDragging = true;
+            startCell = getCoords(el);
+            currentEndCell = startCell;
+            highlightCells(startCell, startCell);
+        }}
+    }}, {{passive: false}});
+    
+    gridContainer.addEventListener('touchmove', (e) => {{
+        if (!isDragging) return;
+        e.preventDefault(); 
+        let touch = e.touches[0];
+        let el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if(el && el.classList.contains('cell')) {{
+            let cellCoords = getCoords(el);
+            currentEndCell = cellCoords;
+            highlightCells(startCell, cellCoords);
+        }}
+    }}, {{passive: false}});
+    
+    gridContainer.addEventListener('touchend', (e) => {{
+        if (!isDragging) return;
+        isDragging = false;
+        checkWord(startCell, currentEndCell);
+        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
+    }}, {{passive: false}});
+
+    function getCoords(el) {{
+        return {{
+            r: parseInt(el.getAttribute('data-r')),
+            c: parseInt(el.getAttribute('data-c'))
+        }};
     }}
     
     function getLineCells(start, end) {{
@@ -288,8 +342,8 @@ html_game = f"""
         let dc = end.c - start.c;
         let steps = Math.max(Math.abs(dr), Math.abs(dc));
         
-        if (steps !== 3) return null; // Un "JUAN" mide exactamente 4 letras (3 pasos de distancia)
-        if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null; // No es recta ni diagonal perfecta
+        if (steps !== 3) return null; 
+        if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null; 
         
         let stepR = dr === 0 ? 0 : dr / steps;
         let stepC = dc === 0 ? 0 : dc / steps;
@@ -313,24 +367,8 @@ html_game = f"""
         }}
     }}
     
-    function endSelect() {{
-        if (!isDragging) return;
-        isDragging = false;
-        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
-    }}
-    
-    // Captura el mouseup final para validar la palabra elegida
-    gridContainer.addEventListener('mouseup', (e) => {{
-        if(!isDragging) return;
-        let endEl = e.target;
-        if(endEl.classList.contains('cell')) {{
-            let er = parseInt(endEl.getAttribute('data-r'));
-            let ec = parseInt(endEl.getAttribute('data-c'));
-            checkWord(startCell, {{r: er, c: ec}});
-        }}
-    }});
-
     function checkWord(start, end) {{
+        if(!start || !end) return;
         let path = getLineCells(start, end);
         if (!path) return;
         
@@ -338,7 +376,6 @@ html_game = f"""
             if (foundIndexes.includes(i)) continue;
             let target = targetWords[i];
             
-            // Comprobación en ambos sentidos (al derecho y al revés)
             let matchForward = true, matchBackward = true;
             for(let j=0; j<4; j++) {{
                 if(path[j].r !== target[j].r || path[j].c !== target[j].c) matchForward = false;
@@ -367,14 +404,16 @@ html_game = f"""
 col_sopa, col_registro = st.columns([1.1, 0.9])
 
 with col_sopa:
-    components.html(html_game, height=660)
+    # Se ajusta la altura del componente nativo de Streamlit
+    components.html(html_game, height=560)
 
 with col_registro:
-    st.markdown("### 🏆 Canjea tu Código de Victoria para registrar tu nombre en la lista. ¡BUEN JUAN A TODOS!")
-    st.write("Cuando se te dé el código secreto al hallar los 20 JUANES, pégalo aquí abajo:")
+    st.markdown("### 🏆 Canjear Código de Victoria")
+    st.write("Cuando la sopa interactiva te dé el código secreto al hallar los 20 Juanes, pégalo aquí abajo:")
     
     codigo_verificador = st.text_input("Introduce el código de la sopa:", type="password")
     
+    # Comprobación del código en Python modificado a ALABADOSEAJUAN!!
     if codigo_verificador.strip() == "ALABADOSEAJUAN!!":
         st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
         with st.form("salon_fama_form", clear_on_submit=True):
@@ -395,4 +434,4 @@ with col_registro:
     if not df_ganadores.empty:
         st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
     else:
-        st.caption("Aún nadie ha completado la sopa con el ratón. ¿Quién se llevará la pole?")
+        st.caption("Aún nadie ha completado la sopa. ¿Quién se llevará la pole?")

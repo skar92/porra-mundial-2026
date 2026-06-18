@@ -132,30 +132,39 @@ st.plotly_chart(fig_lineas, use_container_width=True)
 
 
 # ==============================================================================
-# --- 🧩 SOPA DE LETRAS OPTIMIZADA MÓVIL Y RATÓN (DRAG AND DROP) ---
+# --- 🧩 SOPA DE LETRAS SIN DUPLICADOS (NUEVA CORRECCIÓN) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🧩 Sopa de Letras Interactiva: Encuentra los 20 Juanes")
 st.write("Usa el **dedo** o el **ratón** para arrastrar sobre las letras en cualquier dirección. Si encuentras un **JUAN**, quedará redondeado en verde.")
 
 @st.cache_data
-def generar_sopa_juan_v4():
+def generar_sopa_juan_sin_clones():
     tam = 15
     grid = [['' for _ in range(tam)] for _ in range(tam)]
     word = "JUAN"
     direcciones = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
-    random.seed(42)
+    
+    # Cambiamos la semilla aleatoria para generar una distribución nueva y limpia
+    random.seed(101) 
     
     colocados = 0
     intentos = 0
     juanes_coordenadas = []
     
-    while colocados < 20 and intentos < 3000:
+    # Conjunto para registrar estrictamente el pack único de (Fila Inicial, Columna Inicial, Dirección)
+    registro_coordenadas = set()
+    
+    while colocados < 20 and intentos < 4000:
         intentos += 1
         d = random.choice(direcciones)
         r = random.randint(0, tam - 1)
         c = random.randint(0, tam - 1)
         
+        # Filtro estricto: Si la posición y dirección ya han sido usadas, se ignora por completo
+        if (r, c, d) in registro_coordenadas:
+            continue
+            
         if 0 <= r + d[0]*3 < tam and 0 <= c + d[1]*3 < tam:
             viable = True
             for i in range(4):
@@ -163,13 +172,16 @@ def generar_sopa_juan_v4():
                 if grid[nr][nc] != '' and grid[nr][nc] != word[i]:
                     viable = False
                     break
+                    
             if viable:
                 coords_palabra = []
                 for i in range(4):
                     nr, nc = r + d[0]*i, c + d[1]*i
                     grid[nr][nc] = word[i]
                     coords_palabra.append({"r": nr, "c": nc})
+                
                 juanes_coordenadas.append(coords_palabra)
+                registro_coordenadas.add((r, c, d))
                 colocados += 1
 
     letras_relleno = "BCDEFGHIKLMNOPQRSTVXYZ"
@@ -179,7 +191,7 @@ def generar_sopa_juan_v4():
                 grid[r][c] = random.choice(letras_relleno)
     return grid, juanes_coordenadas
 
-grid_sopa, lista_juanes = generar_sopa_juan_v4()
+grid_sopa, lista_juanes = generar_sopa_juan_sin_clones()
 
 import streamlit.components.v1 as components
 
@@ -404,7 +416,6 @@ html_game = f"""
 col_sopa, col_registro = st.columns([1.1, 0.9])
 
 with col_sopa:
-    # Se ajusta la altura del componente nativo de Streamlit
     components.html(html_game, height=560)
 
 with col_registro:
@@ -413,7 +424,6 @@ with col_registro:
     
     codigo_verificador = st.text_input("Introduce el código de la sopa:", type="password")
     
-    # Comprobación del código en Python modificado a ALABADOSEAJUAN!!
     if codigo_verificador.strip() == "ALABADOSEAJUAN!!":
         st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
         with st.form("salon_fama_form", clear_on_submit=True):

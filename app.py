@@ -5,17 +5,12 @@ from datetime import datetime
 import random
 import os
 import csv
+import json
 
 # Configuración de la interfaz de Streamlit
 st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
 st.title("🏆 Seguimiento y Evolución de la Porra")
 st.write(f"Actualizado al: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
-
-# --- INICIALIZACIÓN DEL ESTADO DEL JUEGO ---
-if 'juanes_encontrados' not in st.session_state:
-    st.session_state.juanes_encontrados = set()
-if 'celdas_resaltadas' not in st.session_state:
-    st.session_state.celdas_resaltadas = set()
 
 FILE_GANADORES = "ganadores_sopa.csv"
 
@@ -137,17 +132,16 @@ st.plotly_chart(fig_lineas, use_container_width=True)
 
 
 # ==============================================================================
-# --- 🧩 SOPA DE LETRAS INTERACTIVA: BUSCANDO A LOS 20 JUANES ---
+# --- 🧩 SOPA DE LETRAS CON SELECCIÓN DE RATÓN (DRAG AND DROP) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🧩 Sopa de Letras Interactiva: Encuentra los 20 Juanes")
-st.write("Indica la coordenada de inicio y fin para capturar un **JUAN** (ej. de `A1` a `A4`). ¡Completa los 20 para registrarte en el Salón de la Fama!")
+st.write("Usa el **ratón** para hacer clic y arrastrar sobre las letras en cualquier dirección. Si encuentras un **JUAN** válido, quedará marcado en verde. ¡Completa los 20!")
 
 @st.cache_data
-def generar_sopa_juan_v2():
+def generar_sopa_juan_v3():
     tam = 15
     grid = [['' for _ in range(tam)] for _ in range(tam)]
-    sol_mask = [[False for _ in range(tam)] for _ in range(tam)]
     word = "JUAN"
     direcciones = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
     random.seed(42)
@@ -174,8 +168,7 @@ def generar_sopa_juan_v2():
                 for i in range(4):
                     nr, nc = r + d[0]*i, c + d[1]*i
                     grid[nr][nc] = word[i]
-                    sol_mask[nr][nc] = True
-                    coords_palabra.append((nr, nc))
+                    coords_palabra.append({"r": nr, "c": nc})
                 juanes_coordenadas.append(coords_palabra)
                 colocados += 1
 
@@ -184,114 +177,222 @@ def generar_sopa_juan_v2():
         for c in range(tam):
             if grid[r][c] == '':
                 grid[r][c] = random.choice(letras_relleno)
-    return grid, sol_mask, juanes_coordenadas
+    return grid, juanes_coordenadas
 
-grid_sopa, mascara_solucion, lista_juanes = generar_sopa_juan_v2()
+grid_sopa, lista_juanes = generar_sopa_juan_v3()
 
-def parse_coordenada(texto):
-    texto = texto.strip().upper()
-    if len(texto) < 2 or not texto[0].isalpha() or not texto[1:].isdigit():
-        return None
-    fila = ord(texto[0]) - ord('A')
-    columna = int(texto[1:]) - 1
-    if 0 <= fila < 15 and 0 <= columna < 15:
-        return (fila, columna)
-    return None
+# Inyección de la Sopa Interactiva mediante HTML5 + JS Avanzado
+import streamlit.components.v1 as components
 
-# Panel de juego y controles
-col_game1, col_game2 = st.columns([0.4, 0.6])
+html_game = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    body {{
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        margin: 0; padding: 10px;
+        background-color: transparent;
+        display: flex; flex-direction: column; align-items: center;
+        user-select: none; -webkit-user-select: none;
+    }}
+    .header-box {{
+        font-size: 20px; font-weight: bold; margin-bottom: 15px;
+        color: #2ecc71; background: rgba(46, 204, 113, 0.15);
+        padding: 10px 25px; border-radius: 30px; border: 1px solid rgba(46, 204, 113, 0.3);
+    }}
+    .grid {{
+        display: grid; grid-template-columns: repeat(15, 36px); grid-gap: 5px;
+        background: #1e1e24; padding: 12px; border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4); touch-action: none;
+    }}
+    .cell {{
+        width: 36px; height: 36px; line-height: 36px; text-align: center;
+        font-weight: bold; font-family: 'Courier New', Courier, monospace; font-size: 19px;
+        color: #ecf0f1; background: #2c3e50; border-radius: 6px;
+        cursor: pointer; transition: background 0.15s, transform 0.1s;
+    }}
+    .cell.dragging {{
+        background: #3498db !important; color: #fff !important;
+        transform: scale(1.08); border-radius: 50%;
+    }}
+    .cell.found {{
+        background: #2ecc71 !important; color: #fff !important;
+        border-radius: 50% !important; font-size: 20px;
+        box-shadow: 0 0 8px #2ecc71; animation: pop 0.3s ease;
+    }}
+    .win-banner {{
+        display: none; margin-top: 20px; padding: 15px 30px;
+        background: #27ae60; color: white; font-weight: bold;
+        border-radius: 10px; font-size: 18px; text-align: center;
+        box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+    }}
+    @keyframes pop {{
+        0% {{ transform: scale(1); }}
+        50% {{ transform: scale(1.2); }}
+        100% {{ transform: scale(1); }}
+    }}
+</style>
+</head>
+<body>
 
-with col_game1:
-    progreso_actual = len(st.session_state.juanes_encontrados)
-    st.metric(label="Juanes descubiertos", value=f"{progreso_actual} / 20")
-    st.progress(progreso_actual / 20)
+<div class="header-box">🕵️‍♂️ Juanes Cazados: <span id="counter">0</span> / 20</div>
+<div class="grid" id="soup-grid"></div>
+<div class="win-banner" id="win-banner">
+    🎉 ¡BRUTAL! HAS CAZADO LOS 20 JUANES.<br>
+    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:3px 8px; border-radius:4px;">JUAN_MOUSE_MASTER_2026</span>
+</div>
+
+<script>
+    const gridData = {json.dumps(grid_sopa)};
+    const targetWords = {json.dumps(lista_juanes)};
     
-    # Formulario para mandar coordenadas
-    if progreso_actual < 20:
-        with st.form("verificar_palabra", clear_on_submit=True):
-            st.write("**Introduce Coordenadas:**")
-            c_inicio = st.text_input("Casilla Inicial (Ej: A1 o F10):").upper()
-            c_fin = st.text_input("Casilla Final (Ej: A4 o C12):").upper()
-            boton_enviar = st.form_submit_button("👉 Validar Selección")
+    let isDragging = false;
+    let startCell = null;
+    let foundIndexes = [];
+    
+    const gridContainer = document.getElementById('soup-grid');
+    
+    // Crear el tablero visualmente
+    for(let r=0; r<15; r++) {{
+        for(let c=0; c<15; c++) {{
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.innerText = gridData[r][c];
+            cell.setAttribute('data-r', r);
+            cell.setAttribute('data-c', c);
+            cell.id = `c-${{r}}-${{c}}`;
             
-            if boton_enviar:
-                coord_i = parse_coordenada(c_inicio)
-                coord_f = parse_coordenada(c_fin)
-                
-                if coord_i and coord_f:
-                    encontrado = False
-                    for idx, palabra in enumerate(lista_juanes):
-                        # Comprobamos si coincide de principio a fin o viceversa
-                        if (coord_i == palabra[0] and coord_f == palabra[3]) or (coord_i == palabra[3] and coord_f == palabra[0]):
-                            if idx in st.session_state.juanes_encontrados:
-                                st.warning("¡Ya habías encontrado este JUAN específicamente!")
-                            else:
-                                st.session_state.juanes_encontrados.add(idx)
-                                for (r, c) in palabra:
-                                    st.session_state.celdas_resaltadas.add((r, c))
-                                st.success("¡BRUTAL! Has cazado un JUAN.")
-                                st.rerun()
-                            encontrado = True
-                            break
-                    if not encontrado:
-                        st.error("No hay ningún JUAN válido entre esas dos casillas. ¡Sigue buscando!")
-                else:
-                    st.error("Coordenadas no válidas. Las filas van de A a O y las columnas de 1 a 15.")
-    else:
-        st.balloons()
-        st.success("🎉 ¡Felicidades! Has completado el juego.")
-        
-        # Formulario de registro para el Salón de la Fama
-        with st.form("registro_salon_fama", clear_on_submit=True):
-            st.write("🌟 **¡Inmortaliza tu victoria en la base de datos!**")
-            nombre_campeon = st.text_input("Tu Nombre / Alias:")
-            boton_guardar = st.form_submit_button("🏆 Registrar mi Nombre")
-            if boton_guardar and nombre_campeon:
-                guardar_ganador(nombre_campeon)
-                st.success(f"¡{nombre_campeon} se ha añadido al Salón de la Fama!")
-                st.rerun()
-
-    mostrar_solucion = st.checkbox("💡 Revelar Solución (Modo Dios)")
+            // Eventos de ratón y táctiles
+            cell.addEventListener('mousedown', (e) => startSelect(r, c));
+            cell.addEventListener('mouseenter', (e) => updateSelect(r, c));
+            gridContainer.appendChild(cell);
+        }}
+    }}
     
-    # Visualización de ganadores históricos
-    st.markdown("### 🏆 Salón de la Fama")
+    window.addEventListener('mouseup', endSelect);
+    
+    function startSelect(r, c) {{
+        isDragging = true;
+        startCell = {{r, c}};
+        highlightCells(startCell, startCell);
+    }}
+    
+    function updateSelect(r, c) {{
+        if (!isDragging) return;
+        highlightCells(startCell, {{r, c}});
+    }}
+    
+    function getLineCells(start, end) {{
+        let dr = end.r - start.r;
+        let dc = end.c - start.c;
+        let steps = Math.max(Math.abs(dr), Math.abs(dc));
+        
+        if (steps !== 3) return null; // Un "JUAN" mide exactamente 4 letras (3 pasos de distancia)
+        if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null; // No es recta ni diagonal perfecta
+        
+        let stepR = dr === 0 ? 0 : dr / steps;
+        let stepC = dc === 0 ? 0 : dc / steps;
+        
+        let path = [];
+        for(let i=0; i<=steps; i++) {{
+            path.push({{r: start.r + stepR*i, c: start.c + stepC*i}});
+        }}
+        return path;
+    }}
+    
+    function highlightCells(start, end) {{
+        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
+        let path = getLineCells(start, end);
+        if (path) {{
+            path.forEach(cell => {{
+                document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('dragging');
+            }});
+        }} else {{
+            document.getElementById(`c-${{start.r}}-${{start.c}}`).classList.add('dragging');
+        }}
+    }}
+    
+    function endSelect() {{
+        if (!isDragging) return;
+        isDragging = false;
+        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
+    }}
+    
+    // Captura el mouseup final para validar la palabra elegida
+    gridContainer.addEventListener('mouseup', (e) => {{
+        if(!isDragging) return;
+        let endEl = e.target;
+        if(endEl.classList.contains('cell')) {{
+            let er = parseInt(endEl.getAttribute('data-r'));
+            let ec = parseInt(endEl.getAttribute('data-c'));
+            checkWord(startCell, {{r: er, c: ec}});
+        }}
+    }});
+
+    function checkWord(start, end) {{
+        let path = getLineCells(start, end);
+        if (!path) return;
+        
+        for(let i=0; i<targetWords.length; i++) {{
+            if (foundIndexes.includes(i)) continue;
+            let target = targetWords[i];
+            
+            // Comprobación en ambos sentidos (al derecho y al revés)
+            let matchForward = true, matchBackward = true;
+            for(let j=0; j<4; j++) {{
+                if(path[j].r !== target[j].r || path[j].c !== target[j].c) matchForward = false;
+                if(path[j].r !== target[3-j].r || path[j].c !== target[3-j].c) matchBackward = false;
+            }}
+            
+            if (matchForward || matchBackward) {{
+                foundIndexes.push(i);
+                target.forEach(cell => {{
+                    document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('found');
+                }});
+                document.getElementById('counter').innerText = foundIndexes.length;
+                
+                if (foundIndexes.length === 20) {{
+                    document.getElementById('win-banner').style.display = 'block';
+                }}
+                break;
+            }}
+        }}
+    }}
+</script>
+</body>
+</html>
+"""
+
+col_sopa, col_registro = st.columns([1.1, 0.9])
+
+with col_sopa:
+    components.html(html_game, height=660)
+
+with col_registro:
+    st.markdown("### 🏆 Canjear Código de Victoria")
+    st.write("Cuando la interfaz interactiva de la izquierda te dé el código secreto al hallar los 20, pégalo aquí abajo:")
+    
+    codigo_verificador = st.text_input("Introduce el código de la sopa:", type="password")
+    
+    if codigo_verificador.strip() == "JUAN_MOUSE_MASTER_2026":
+        st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
+        with st.form("salon_fama_form", clear_on_submit=True):
+            nombre_jugador = st.text_input("Tu Nombre / Alias:")
+            enviar_nombre = st.form_submit_button("🥇 Inmortalizar mi Nombre")
+            
+            if enviar_nombre and nombre_jugador:
+                guardar_ganador(nombre_jugador)
+                st.success(f"¡Brutal! {nombre_jugador} ha sido registrado oficialmente.")
+                st.rerun()
+    else:
+        if codigo_verificador:
+            st.error("Código incorrecto. Asegúrate de cazar los 20 Juanes completos.")
+
+    st.markdown("---")
+    st.markdown("### 🌟 Historial de Ganadores")
     df_ganadores = listar_ganadores()
     if not df_ganadores.empty:
         st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
     else:
-        st.caption("Nadie ha completado el desafío todavía. ¿Quién será el primero?")
-
-with col_game2:
-    # Construcción de la matriz HTML interactiva con índices visuales
-    html_sopa = "<table style='margin: auto; border-collapse: separate; border-spacing: 3px; font-family: monospace; font-size: 17px; text-align: center;'><tr>"
-    # Fila superior de números (columnas)
-    html_sopa += "<td style='width: 34px; height: 34px; font-weight: bold; color: #888;'></td>"
-    for c in range(15):
-        html_sopa += f"<td style='width: 34px; height: 34px; font-weight: bold; color: #888;'>{c+1}</td>"
-    html_sopa += "</tr>"
-    
-    for r in range(15):
-        letra_fila = chr(ord('A') + r)
-        html_sopa += "<tr>"
-        # Columna izquierda de letras (filas)
-        html_sopa += f"<td style='width: 34px; height: 34px; font-weight: bold; color: #888;'>{letra_fila}</td>"
-        
-        for c in range(15):
-            letra = grid_sopa[r][c]
-            # Determinar si la casilla está coloreada
-            es_exito = mascara_solucion[r][c] if mostrar_solucion else ((r, c) in st.session_state.celdas_resaltadas)
-            
-            if es_exito:
-                bg_color = "#FFD700" if mostrar_solucion else "#2ecc71"  # Oro para trampa, verde esmeralda para juego real
-                text_color = "#000000"
-                border_style = "2px solid #FF8C00" if mostrar_solucion else "2px solid #27ae60"
-            else:
-                bg_color = "rgba(128, 128, 128, 0.08)"
-                text_color = "inherit"
-                border_style = "1px solid rgba(128, 128, 128, 0.2)"
-                
-            html_sopa += f"<td style='width: 34px; height: 34px; border: {border_style}; background-color: {bg_color}; color: {text_color}; font-weight: bold; border-radius: 4px;'>{letra}</td>"
-        html_sopa += "</tr>"
-    html_sopa += "</table>"
-    
-    st.markdown(html_sopa, unsafe_allow_html=True)
+        st.caption("Aún nadie ha completado la sopa con el ratón. ¿Quién se llevará la pole?")

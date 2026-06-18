@@ -375,7 +375,7 @@ with col_registro:
     
     codigo_verificador = st.text_input("Introduce el código de la sopa:", type="password")
     
-    if codigo_verificador.strip() == "JUAN_MOUSE_MASTER_2026":
+    if codigo_verificador.strip() == "ALABADOSEAJUAN!!":
         st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
         with st.form("salon_fama_form", clear_on_submit=True):
             nombre_jugador = st.text_input("Tu Nombre / Alias:")

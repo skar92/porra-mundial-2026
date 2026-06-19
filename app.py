@@ -138,8 +138,6 @@ st.plotly_chart(fig_lineas, use_container_width=True)
 
 
 
-
-
 import streamlit as st
 import random
 import json
@@ -150,13 +148,32 @@ from datetime import datetime
 # ==============================================================================
 # --- 📊 CONTROL DE JUGADORES POR JUEGO (INDEPENDIENTES) ---
 # ==============================================================================
-JUGADORES_BASE = ["telenti", "juan", "mirete", "carlos", "miguel angel", "sierra", "ejkar", "JOAQUIN GANADOR"]
+# Se ha añadido "joaquin" a la lista base
+JUGADORES_BASE = ["telenti", "juan", "mirete", "carlos", "miguel angel", "sierra", "ejkar", "joaquin"]
+
+# Asumimos que estas funciones existen en tu app principal, si no, darán error.
+# Para esta demo, si no existen, creamos un mock vacío.
+if 'listar_ganadores' not in globals():
+    def listar_ganadores():
+        return st.session_state.get('mock_ganadores', st.empty())
+if 'guardar_ganador' not in globals():
+    def guardar_ganador(nombre):
+        if 'mock_ganadores_list' not in st.session_state:
+            st.session_state['mock_ganadores_list'] = []
+        st.session_state['mock_ganadores_list'].append(nombre)
+        # Esto es solo para que el mock funcione en la demo
+        import pandas as pd
+        st.session_state['mock_ganadores'] = pd.DataFrame(st.session_state['mock_ganadores_list'], columns=['Ganador'])
 
 df_ganadores = listar_ganadores()
 registros_reales = []
 
-if not df_ganadores.empty:
-    registros_reales = [str(val).strip().lower() for val in df_ganadores.values.flatten()]
+# Intentamos obtener los valores si es un DataFrame, si no, asumimos lista vacía del mock inicial
+try:
+    if not df_ganadores.empty:
+        registros_reales = [str(val).strip().lower() for val in df_ganadores.values.flatten()]
+except:
+    registros_reales = []
 
 # 🧩 FILTRO SOPA: Desaparece si el nombre está tal cual
 jugadores_sopa = [p for p in JUGADORES_BASE if p.lower() not in registros_reales]
@@ -378,6 +395,7 @@ with col_registro:
         st.success("🔓 ¡CÓDIGO VERIFICADO!")
         if jugadores_sopa:
             with st.form("salon_fama_form", clear_on_submit=True):
+                # Desplegable de la sopa (incluye a Joaquin si no ha ganado)
                 jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_sopa, key="sopa_user")
                 enviar_nombre = st.form_submit_button("🥇 Inmortalizar mi Nombre")
                 if enviar_nombre and jugador_seleccionado:
@@ -391,8 +409,11 @@ with col_registro:
 
     st.markdown("---")
     st.markdown("### 🌟 Historial de Ganadores")
-    if not df_ganadores.empty:
-        st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
+    try:
+        if not df_ganadores.empty:
+            st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
+    except:
+        pass
 
 
 # ==============================================================================
@@ -403,6 +424,7 @@ st.subheader("🎮 Minijuego: El Salto del Mundial")
 st.write("Esquiva las **tarjetas rojas (🟥)** y junta **copas (🏆)**. Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
 carpeta_del_script = os.path.dirname(os.path.abspath(__file__))
+# Asegúrate de tener una imagen 'jugador.png' o se usará el fallback de pelota
 ruta_foto_jugador = os.path.join(carpeta_del_script, "jugador.png")
 
 img_base64 = ""
@@ -413,7 +435,6 @@ if os.path.exists(ruta_foto_jugador):
     except Exception as e:
         st.error(f"⚠️ Error de imagen: {e}")
 
-# 🛠️ CORRECCIÓN CLAVE: El mensaje de reinicio ahora tiene un botón de acción real del usuario
 html_dino = f"""
 <!DOCTYPE html>
 <html>
@@ -453,7 +474,6 @@ html_dino = f"""
     <div id="restart-message">
         <h2 style="margin:0 0 5px 0; color:#e74c3c;">GAME OVER</h2>
         <div id="final-score-text" style="font-weight:bold; margin-bottom:5px;">Puntos: 0</div>
-        <!-- BOTÓN DE GUARDADO REAL: Inmune a bloqueos de popups -->
         <button id="save-score-action" class="save-btn">💾 Enviar Puntos abajo</button>
         <p style="margin:8px 0 0 0; font-size:11px; color:#aaa;">O pulsa Espacio/Toca para reiniciar partida</p>
     </div>
@@ -480,7 +500,6 @@ html_dino = f"""
 
     function jump(e) {{
         if (isGameOver) {{
-            // Si hacen clic en el botón de guardar, no reiniciamos el juego
             if(e.target && e.target.id === 'save-score-action') return;
             if (e.code === 'Space' || e.type === 'touchstart' || e.code === 'ArrowUp') {{ resetGame(); }}
             return;
@@ -544,7 +563,6 @@ html_dino = f"""
         finalScoreText.innerText = "Has conseguido: " + score + " pts";
         restartMessage.style.display = "block";
         
-        // Al hacer clic, usamos el 'document.referrer' para abrir la web principal de forma limpia e inmune a bloqueos
         saveScoreAction.onclick = function(e) {{
             e.stopPropagation();
             let parentUrl = document.referrer.split('?')[0]; 
@@ -580,6 +598,7 @@ if puntos_detectados is not None:
     
     if jugadores_dino:
         with st.form("guardar_record_dino_auto", clear_on_submit=True):
+            # Desplegable del dino (incluye a Joaquin si no tiene récord)
             jugador_seleccionado = st.selectbox("Selecciona tu nombre para inmortalizar la marca:", jugadores_dino, key="dino_user_final")
             submit_record = st.form_submit_button("🥇 Inmortalizar Récord y Hora")
             
@@ -590,16 +609,17 @@ if puntos_detectados is not None:
                 guardar_ganador(nombre_registro)
                 st.success(f"¡Récord guardado para {jugador_seleccionado}!")
                 
-                del st.query_params["game_score"]
+                # Limpiar query params de forma compatible con Streamlit moderno
+                st.query_params.clear()
                 st.rerun()
                 
         if st.button("❌ Descartar y limpiar"):
-            del st.query_params["game_score"]
+            st.query_params.clear()
             st.rerun()
     else:
         st.warning("⚠️ Todos los jugadores ya tienen un récord guardado.")
         if st.button("🔄 Limpiar URL"):
-            del st.query_params["game_score"]
+            st.query_params.clear()
             st.rerun()
 else:
     st.caption("🏃‍♂️ Juega una partida. Al perder, pulsa el botón verde dentro del juego y este panel se activará solo con tus puntos.")

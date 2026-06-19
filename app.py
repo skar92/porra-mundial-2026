@@ -453,35 +453,40 @@ with col_registro:
 
 
 
-
-
-
 # ==============================================================================
-# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (CORREGIDO) ---
+# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (CON COPAS, VELOCIDAD Y REGISTRO) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
-st.write("¡Esquiva las tarjetas rojas y las copas! Pulsa **ESPACIO**, la **FLECHA ARRIBA** o **TOCA LA PANTALLA** para saltar.")
+st.write("¡Esquiva las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
 import base64
 
-# Forzar la lectura limpia del archivo PNG a Base64
-img_base64 = ""
 img_path = 'jugador.png'
+player_html = ""
 
 if os.path.exists(img_path):
     try:
         with open(img_path, 'rb') as f:
-            img_base64 = base64.b64encode(f.read()).decode('utf-8')
+            data = f.read()
+            img_base64 = base64.b64encode(data).decode('utf-8').replace('\n', '').replace('\r', '')
+        data_uri = f"data:image/png;base64,{img_base64}"
+        player_html = f'<img src="{data_uri}" style="width:100%; height:100%; object-fit:contain; display:block;" />'
     except Exception as e:
-        st.error(f"Error al procesar jugador.png: {e}")
-
-# Si se cargó con éxito, creamos la etiqueta de imagen; si no, un círculo azul
-if img_base64:
-    player_html = f'<img id="player-img" src="data:image/png;base64,{img_base64}" style="width:100%; height:100%; object-fit:contain;" />'
+        player_html = '<div style="width:100%; height:100%; background-color:#3498db; border-radius:50%;"></div>'
 else:
-    st.warning("⚠️ No se pudo cargar 'jugador.png'. Usando avatar por defecto.")
     player_html = '<div style="width:100%; height:100%; background-color:#3498db; border-radius:50%;"></div>'
+
+# Inicializar un estado en Streamlit para capturar la puntuación al perder
+if "puntos_dino" not in st.session_state:
+    st.session_state.puntos_dino = None
+
+# Recibir la puntuación desde el JavaScript del juego
+puntuacion_recibida = st.query_params.get("game_score", None)
+if puntuacion_recibida is not None:
+    st.session_state.puntos_dino = int(puntuacion_recibida)
+    # Limpiamos el parámetro de la URL para que no se quede en bucle
+    st.query_params.clear()
 
 html_dino = f"""
 <!DOCTYPE html>
@@ -490,93 +495,49 @@ html_dino = f"""
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
     body {{
-        margin: 0; padding: 0;
-        overflow: hidden;
+        margin: 0; padding: 0; overflow: hidden;
         display: flex; justify-content: center; align-items: center;
-        background-color: transparent;
-        font-family: sans-serif;
-        user-select: none; -webkit-user-select: none;
-        touch-action: none;
+        background-color: transparent; font-family: sans-serif;
+        user-select: none; -webkit-user-select: none; touch-action: none;
     }}
     #game-container {{
-        width: 100%;
-        max-width: 800px;
-        height: 250px;
-        background-color: #f7f7f7;
-        border-bottom: 2px solid #535353;
-        border-radius: 8px;
-        position: relative;
-        overflow: hidden;
-        cursor: pointer;
+        width: 100%; max-width: 800px; height: 250px;
+        background-color: #f7f7f7; border-bottom: 2px solid #535353;
+        border-radius: 8px; position: relative; overflow: hidden; cursor: pointer;
     }}
     #player {{
-        width: 50px;
-        height: 50px;
-        position: absolute;
-        bottom: 0;
-        left: 50px;
-        z-index: 10;
+        width: 50px; height: 50px; position: absolute; bottom: 0; left: 50px; z-index: 10;
     }}
-    .obstacle {{
-        position: absolute;
-        bottom: 0;
-        z-index: 5;
-    }}
+    .obstacle {{ position: absolute; bottom: 0; z-index: 5; }}
     .cactus {{
-        width: 30px;
-        height: 50px;
-        background-color: #e74c3c;
-        border-radius: 4px;
-        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        width: 25px; height: 45px; background-color: #e74c3c; border-radius: 4px;
     }}
     .cactus::after {{
-        content: '🟥';
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 20px;
+        content: '🟥'; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); font-size: 18px;
     }}
     .copa {{
-        width: 40px;
-        height: 40px;
-        background-color: #f1c40f;
-        border-radius: 50% 50% 0 0;
+        width: 35px; height: 35px; bottom: 40px; /* Flota un poco para saltar a por ella */
     }}
     .copa::after {{
-        content: '🏆';
-        position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 24px;
+        content: '🏆'; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); font-size: 24px;
     }}
     #score-board {{
-        position: absolute;
-        top: 10px;
-        right: 20px;
-        font-size: 20px;
-        font-weight: bold;
-        color: #535353;
-        font-family: monospace;
-        z-index: 15;
+        position: absolute; top: 10px; right: 20px;
+        font-size: 20px; font-weight: bold; color: #535353; font-family: monospace; z-index: 15;
     }}
     #restart-message {{
-        display: none;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        background-color: rgba(0,0,0,0.8);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        z-index: 20;
+        display: none; position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%); text-align: center;
+        background-color: rgba(0,0,0,0.85); color: white;
+        padding: 15px 30px; border-radius: 10px; z-index: 20;
     }}
-    .jump {{
-        animation: jump 0.5s linear;
-    }}
+    .jump {{ animation: jump 0.45s linear; }}
     @keyframes jump {{
         0% {{ bottom: 0; }}
-        30% {{ bottom: 120px; }}
-        70% {{ bottom: 120px; }}
+        30% {{ bottom: 130px; }}
+        70% {{ bottom: 130px; }}
         100% {{ bottom: 0; }}
     }}
 </style>
@@ -587,8 +548,8 @@ html_dino = f"""
     <div id="score-board">00000</div>
     <div id="player">{player_html}</div>
     <div id="restart-message">
-        <h1>GAME OVER</h1>
-        <p>Toca o pulsa ESPACIO para reiniciar</p>
+        <h2 style="margin:0 0 5px 0;">GAME OVER</h2>
+        <p style="margin:0;">Toca o Espacio para reiniciar</p>
     </div>
 </div>
 
@@ -601,7 +562,7 @@ html_dino = f"""
     let isJumping = false;
     let isGameOver = false;
     let score = 0;
-    let gameSpeed = 5;
+    let gameSpeed = 6;
     let obstacleTimer;
     let scoreInterval;
 
@@ -612,7 +573,6 @@ html_dino = f"""
             }}
             return;
         }}
-        
         if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
         
         if (!isJumping) {{
@@ -621,7 +581,7 @@ html_dino = f"""
             setTimeout(() => {{
                 player.classList.remove("jump");
                 isJumping = false;
-            }}, 500);
+            }}, 450);
         }}
     }}
 
@@ -632,16 +592,15 @@ html_dino = f"""
         if (isGameOver) return;
 
         const obstacle = document.createElement('div');
-        const isCopa = Math.random() > 0.7;
+        const isCopa = Math.random() > 0.65; // 35% Copas, 65% Tarjetas
         
         obstacle.classList.add('obstacle');
         obstacle.classList.add(isCopa ? 'copa' : 'cactus');
         
-        obstacle.style.left = container.offsetWidth + 'px';
+        let obstaclePos = container.offsetWidth;
+        obstacle.style.left = obstaclePos + 'px';
         container.appendChild(obstacle);
 
-        let obstaclePos = container.offsetWidth;
-        
         let moveInterval = setInterval(() => {{
             if (isGameOver) {{
                 clearInterval(moveInterval);
@@ -656,35 +615,51 @@ html_dino = f"""
                 obstacle.remove();
             }}
             
-            // Colisiones precisas
+            // ZONA DE COLISIÓN (X: entre 45px y 95px donde se ubica el jugador)
             if (obstaclePos > 45 && obstaclePos < 95) {{
                 let playerBottom = parseInt(window.getComputedStyle(player).getPropertyValue("bottom"));
-                let obstacleHeight = isCopa ? 35 : 45;
-
-                if (playerBottom < obstacleHeight) {{
-                    gameOver();
+                
+                if (isCopa) {{
+                    // Si toca la copa (está flotando entre 40px y 75px de alto)
+                    if (playerBottom + 50 >= 40 && playerBottom <= 75) {{
+                        score += 50; // ¡Premio!
+                        scoreBoard.innerText = score.toString().padStart(5, '0');
+                        clearInterval(moveInterval);
+                        obstacle.remove();
+                        gameSpeed += 0.2; // La copa también acelera ligeramente el juego
+                    }}
+                }} else {{
+                    // Si choca contra la tarjeta roja (en el suelo, altura 45px)
+                    if (playerBottom < 45) {{
+                        gameOver();
+                    }}
                 }}
             }}
         }}, 10);
 
-        let nextObstacleTime = Math.random() * (1800 - 800) + 800; 
+        // Frecuencia de obstáculos: disminuye el tiempo de espera según aumenta la velocidad
+        let minTiempo = Math.max(600, 1000 - (gameSpeed * 40));
+        let maxTiempo = Math.max(1200, 2000 - (gameSpeed * 60));
+        let nextObstacleTime = Math.random() * (maxTiempo - minTiempo) + minTiempo; 
+        
         obstacleTimer = setTimeout(createObstacle, nextObstacleTime);
     }}
 
     function startGame() {{
         isGameOver = false;
         score = 0;
-        gameSpeed = 5;
+        gameSpeed = 6;
         restartMessage.style.display = "none";
         player.style.bottom = "0px";
         
         document.querySelectorAll('.obstacle').forEach(el => el.remove());
 
         scoreInterval = setInterval(() => {{
-            score++;
+            score += 1;
             scoreBoard.innerText = score.toString().padStart(5, '0');
-            if (score % 400 === 0) {{
-                gameSpeed += 0.6;
+            // Aceleración constante y progresiva cada 150 puntos
+            if (score % 150 === 0) {{
+                gameSpeed += 0.5;
             }}
         }}, 100);
 
@@ -697,6 +672,13 @@ html_dino = f"""
         clearTimeout(obstacleTimer);
         clearInterval(scoreInterval);
         restartMessage.style.display = "block";
+        
+        // Enviar la puntuación final a Streamlit actualizando los parámetros de la URL
+        setTimeout(() => {{
+            const url = new URL(window.parent.location.href);
+            url.searchParams.set("game_score", score);
+            window.parent.location.href = url.toString();
+        }}, 600);
     }}
 
     function resetGame() {{
@@ -709,4 +691,25 @@ html_dino = f"""
 </html>
 """
 
-components.html(html_dino, height=300)
+import streamlit.components.v1 as components
+components.html(html_dino, height=280)
+
+# --- PANEL DE GUARDADO TRAS GAME OVER ---
+if st.session_state.puntos_dino is not None:
+    st.info(f"💀 **¡Game Over!** Conseguiste una puntuación de: **{st.session_state.puntos_dino} puntos**")
+    
+    # Desplegable dinámico con la lista de jugadores que ya tienes definidos en tu porra
+    lista_jugadores = list(porra.keys())
+    lista_jugadores.sort()
+    
+    with st.form("guardar_record_dino"):
+        jugador_seleccionado = st.selectbox("¿Quién eres?", lista_jugadores)
+        submit_record = st.form_submit_button("💾 Guardar récord en el Salón de la Fama")
+        
+        if submit_record:
+            # Reutiliza la función 'guardar_ganador' adaptando el texto
+            nombre_registro = f"{jugador_seleccionado} (Dino: {st.session_state.puntos_dino} pts)"
+            guardar_ganador(nombre_registro)
+            st.success(f"¡Récord de {jugador_seleccionado} inmortalizado con éxito!")
+            st.session_state.puntos_dino = None  # Reseteamos el estado
+            st.rerun()

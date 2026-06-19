@@ -261,7 +261,7 @@ html_game = f"""
 </div>
 <div class="win-banner" id="win-banner">
     🎉 ¡BRUTAL! HAS CAZADO LOS 20 JUANES.<br>
-    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:2px 6px; border-radius:4px;">ALABADOSEAJUAN!!</span>
+    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:2px 6px; border-radius:4px;">JUANETE!!</span>
 </div>
 
 <script>
@@ -429,7 +429,7 @@ with col_registro:
     
     codigo_verificador = st.text_input("Introduce el código de la sopa:", type="password")
     
-    if codigo_verificador.strip() == "ALABADOSEAJUAN!!":
+    if codigo_verificador.strip() == "JUANETE!!":
         st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
         with st.form("salon_fama_form", clear_on_submit=True):
             nombre_jugador = st.text_input("Tu Nombre / Alias:")
@@ -461,7 +461,7 @@ with col_registro:
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
-st.write("¡Esquiva las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
+st.write("¡Haz que JUAN esquive las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
 import os
 import base64
@@ -510,7 +510,7 @@ html_dino = f"""
         border-radius: 8px; position: relative; overflow: hidden; cursor: pointer;
     }}
     #player {{
-        width: 50px; height: 50px; position: absolute; bottom: 0; left: 50px; z-index: 10;
+        width: 80px; height: 70px; position: absolute; bottom: 0; left: 50px; z-index: 10;
     }}
     #player-canvas {{
         width: 100%; height: 100%; display: block;

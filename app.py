@@ -143,13 +143,12 @@ st.plotly_chart(fig_lineas, use_container_width=True)
 
 
 
-
 import streamlit as st
 import random
 import json
 import os
 import base64
-from datetime import datetime  # <--- Añadido para controlar el tiempo exacto
+from datetime import datetime
 
 # ==============================================================================
 # --- 📊 CONTROL DE JUGADORES POR JUEGO (INDEPENDIENTES) ---
@@ -373,27 +372,18 @@ html_game = f"""
     }}, {{passive: false}});
 
     function getCoords(el) {{
-        return {{
-            r: parseInt(el.getAttribute('data-r')),
-            c: parseInt(el.getAttribute('data-c'))
-        }};
+        return {{ r: parseInt(el.getAttribute('data-r')), c: parseInt(el.getAttribute('data-c')) }};
     }}
     
     function getLineCells(start, end) {{
-        let dr = end.r - start.r;
-        let dc = end.c - start.c;
+        let dr = end.r - start.r; let dc = end.c - start.c;
         let steps = Math.max(Math.abs(dr), Math.abs(dc));
-        
         if (steps !== 3) return null; 
         if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null; 
-        
         let stepR = dr === 0 ? 0 : dr / steps;
         let stepC = dc === 0 ? 0 : dc / steps;
-        
         let path = [];
-        for(let i=0; i<=steps; i++) {{
-            path.push({{r: start.r + stepR*i, c: start.c + stepC*i}});
-        }}
+        for(let i=0; i<=steps; i++) {{ path.push({{r: start.r + stepR*i, c: start.c + stepC*i}}); }}
         return path;
     }}
     
@@ -401,9 +391,7 @@ html_game = f"""
         document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
         let path = getLineCells(start, end);
         if (path) {{
-            path.forEach(cell => {{
-                document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('dragging');
-            }});
+            path.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('dragging'); }});
         }} else {{
             document.getElementById(`c-${{start.r}}-${{start.c}}`).classList.add('dragging');
         }}
@@ -417,23 +405,16 @@ html_game = f"""
         for(let i=0; i<targetWords.length; i++) {{
             if (foundIndexes.includes(i)) continue;
             let target = targetWords[i];
-            
             let matchForward = true, matchBackward = true;
             for(let j=0; j<4; j++) {{
                 if(path[j].r !== target[j].r || path[j].c !== target[j].c) matchForward = false;
                 if(path[j].r !== target[3-j].r || path[j].c !== target[3-j].c) matchBackward = false;
             }}
-            
             if (matchForward || matchBackward) {{
                 foundIndexes.push(i);
-                target.forEach(cell => {{
-                    document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('found');
-                }});
+                target.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('found'); }});
                 document.getElementById('counter').innerText = foundIndexes.length;
-                
-                if (foundIndexes.length === 20) {{
-                    document.getElementById('win-banner').style.display = 'block';
-                }}
+                if (foundIndexes.length === 20) {{ document.getElementById('win-banner').style.display = 'block'; }}
                 break;
             }}
         }}
@@ -456,12 +437,10 @@ with col_registro:
     
     if codigo_verificador.strip() == "JUANETE!!":
         st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
-        
         if jugadores_sopa:
             with st.form("salon_fama_form", clear_on_submit=True):
                 jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_sopa, key="sopa_user")
                 enviar_nombre = st.form_submit_button("🥇 Inmortalizar mi Nombre")
-                
                 if enviar_nombre and jugador_seleccionado:
                     guardar_ganador(jugador_seleccionado)
                     st.success(f"¡Brutal! {jugador_seleccionado} ha sido registrado oficialmente.")
@@ -497,10 +476,8 @@ if os.path.exists(ruta_foto_jugador):
             img_base64 = base64.b64encode(f.read()).decode("utf-8").replace("\n", "").replace("\r", "")
     except Exception as e:
         st.error(f"⚠️ Error al procesar imagen: {e}")
-else:
-    st.error(f"❌ **No se encuentra 'jugador.png'** en la carpeta del script.")
 
-# NOTA: He eliminado el redireccionamiento problemático de la función gameOver() en JS
+# 🛠️ CORRECCIÓN AQUÍ: Se modificó 'gameOver()' en JS para recargar la ventana madre de forma correcta
 html_dino = f"""
 <!DOCTYPE html>
 <html>
@@ -518,57 +495,25 @@ html_dino = f"""
         background-color: #f7f7f7; border-bottom: 2px solid #535353;
         border-radius: 8px; position: relative; overflow: hidden; cursor: pointer;
     }}
-    #player {{
-        width: 80px; height: 70px; position: absolute; bottom: 0; left: 50px; z-index: 10;
-    }}
-    #player-canvas {{
-        width: 100%; height: 100%; display: block;
-    }}
+    #player {{ width: 80px; height: 70px; position: absolute; bottom: 0; left: 50px; z-index: 10; }}
+    #player-canvas {{ width: 100%; height: 100%; display: block; }}
     .obstacle {{ position: absolute; bottom: 0; z-index: 5; }}
-    .cactus {{
-        width: 25px; height: 45px; background-color: #e74c3c; border-radius: 4px;
-    }}
-    .cactus::after {{
-        content: '🟥'; position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%); font-size: 18px;
-    }}
-    .copa {{
-        width: 35px; height: 35px; bottom: 50px;
-    }}
-    .copa::after {{
-        content: '🏆'; position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%); font-size: 24px;
-    }}
-    #score-board {{
-        position: absolute; top: 10px; right: 20px;
-        font-size: 20px; font-weight: bold; color: #535353; font-family: monospace; z-index: 15;
-    }}
-    #restart-message {{
-        display: none; position: absolute; top: 50%; left: 50%;
-        transform: translate(-50%, -50%); text-align: center;
-        background-color: rgba(0,0,0,0.85); color: white;
-        padding: 15px 30px; border-radius: 10px; z-index: 20;
-    }}
+    .cactus {{ width: 25px; height: 45px; background-color: #e74c3c; border-radius: 4px; }}
+    .cactus::after {{ content: '🟥'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; }}
+    .copa {{ width: 35px; height: 35px; bottom: 50px; }}
+    .copa::after {{ content: '🏆'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; }}
+    #score-board {{ position: absolute; top: 10px; right: 20px; font-size: 20px; font-weight: bold; color: #535353; font-family: monospace; z-index: 15; }}
+    #restart-message {{ display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background-color: rgba(0,0,0,0.85); color: white; padding: 15px 30px; border-radius: 10px; z-index: 20; }}
     .jump {{ animation: jump 0.45s linear; }}
-    @keyframes jump {{
-        0% {{ bottom: 0; }}
-        30% {{ bottom: 130px; }}
-        70% {{ bottom: 130px; }}
-        100% {{ bottom: 0; }}
-    }}
+    @keyframes jump {{ 0% {{ bottom: 0; }} 30% {{ bottom: 130px; }} 70% {{ bottom: 130px; }} 100% {{ bottom: 0; }} }}
 </style>
 </head>
 <body>
 
 <div id="game-container">
     <div id="score-board">00000</div>
-    <div id="player">
-        <canvas id="player-canvas" width="100" height="100"></canvas>
-    </div>
-    <div id="restart-message">
-        <h2 style="margin:0 0 5px 0;">GAME OVER</h2>
-        <p style="margin:0;">Toca o Espacio para reiniciar</p>
-    </div>
+    <div id="player"><canvas id="player-canvas" width="100" height="100"></canvas></div>
+    <div id="restart-message"><h2 style="margin:0 0 5px 0;">GAME OVER</h2><p style="margin:0;">Toca o Espacio para reiniciar</p></div>
 </div>
 
 <script>
@@ -579,35 +524,14 @@ html_dino = f"""
     const scoreBoard = document.getElementById("score-board");
     const restartMessage = document.getElementById("restart-message");
     
-    let isJumping = false;
-    let isGameOver = false;
-    let score = 0;
-    let gameSpeed = 6;
-    let obstacleTimer;
-    let scoreInterval;
-    
-    const b64Data = "{img_base64}";
-    const playerImg = new Image();
-    
-    if (b64Data && b64Data.length > 0) {{
-        playerImg.src = "data:image/png;base64," + b64Data;
-    }}
-    
+    let isJumping = false; let isGameOver = false; let score = 0; let gameSpeed = 6; let obstacleTimer; let scoreInterval;
+    const b64Data = "{img_base64}"; const playerImg = new Image();
+    if (b64Data && b64Data.length > 0) {{ playerImg.src = "data:image/png;base64," + b64Data; }}
     playerImg.onload = function() {{ dibujarAvatar(); }};
     playerImg.onerror = function() {{ dibujarFallback(); }};
 
-    function dibujarAvatar() {{
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(playerImg, 0, 0, canvas.width, canvas.height);
-    }}
-
-    function dibujarFallback() {{
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#3498db";
-        ctx.beginPath(); ctx.arc(50, 50, 45, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = "#ffffff"; ctx.font = "bold 30px sans-serif";
-        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⚽", 50, 50);
-    }}
+    function dibujarAvatar() {{ ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(playerImg, 0, 0, canvas.width, canvas.height); }}
+    function dibujarFallback() {{ ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = "#3498db"; ctx.beginPath(); ctx.arc(50, 50, 45, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffffff"; ctx.font = "bold 30px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⚽", 50, 50); }}
 
     function jump(e) {{
         if (isGameOver) {{
@@ -615,14 +539,9 @@ html_dino = f"""
             return;
         }}
         if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
-        
         if (!isJumping) {{
-            isJumping = true;
-            player.classList.add("jump");
-            setTimeout(() => {{
-                player.classList.remove("jump");
-                isJumping = false;
-            }}, 450);
+            isJumping = true; player.classList.add("jump");
+            setTimeout(() => {{ player.classList.remove("jump"); isJumping = false; }}, 450);
         }}
     }}
 
@@ -631,38 +550,25 @@ html_dino = f"""
 
     function createObstacle() {{
         if (isGameOver) return;
-
         const obstacle = document.createElement('div');
         const isCopa = Math.random() > 0.65;
-        
-        obstacle.classList.add('obstacle');
-        obstacle.classList.add(isCopa ? 'copa' : 'cactus');
-        
+        obstacle.classList.add('obstacle', isCopa ? 'copa' : 'cactus');
         let obstaclePos = container.offsetWidth;
         obstacle.style.left = obstaclePos + 'px';
         container.appendChild(obstacle);
 
         let moveInterval = setInterval(() => {{
             if (isGameOver) {{ clearInterval(moveInterval); return; }}
-            
             obstaclePos -= gameSpeed;
             obstacle.style.left = obstaclePos + 'px';
-
-            if (obstaclePos < -40) {{
-                clearInterval(moveInterval);
-                obstacle.remove();
-            }}
+            if (obstaclePos < -40) {{ clearInterval(moveInterval); obstacle.remove(); }}
             
             if (obstaclePos > 45 && obstaclePos < 95) {{
                 let playerBottom = parseInt(window.getComputedStyle(player).getPropertyValue("bottom"));
-                
                 if (isCopa) {{
                     if (playerBottom + 50 >= 50 && playerBottom <= 85) {{
-                        score += 50;
-                        scoreBoard.innerText = score.toString().padStart(5, '0');
-                        clearInterval(moveInterval);
-                        obstacle.remove();
-                        gameSpeed += 0.2;
+                        score += 50; scoreBoard.innerText = score.toString().padStart(5, '0');
+                        clearInterval(moveInterval); obstacle.remove(); gameSpeed += 0.2;
                     }}
                 }} else {{
                     if (playerBottom < 45) {{ gameOver(); }}
@@ -672,38 +578,27 @@ html_dino = f"""
 
         let minTiempo = Math.max(600, 1000 - (gameSpeed * 40));
         let maxTiempo = Math.max(1200, 2000 - (gameSpeed * 60));
-        let nextObstacleTime = Math.random() * (maxTiempo - minTiempo) + minTiempo; 
-        
-        obstacleTimer = setTimeout(createObstacle, nextObstacleTime);
+        setTimeout(createObstacle, Math.random() * (maxTiempo - minTiempo) + minTiempo);
     }}
 
     function startGame() {{
-        isGameOver = false;
-        score = 0;
-        gameSpeed = 6;
-        restartMessage.style.display = "none";
-        player.style.bottom = "0px";
-        scoreBoard.innerText = "00000";
-        
+        isGameOver = false; score = 0; gameSpeed = 6; restartMessage.style.display = "none"; player.style.bottom = "0px"; scoreBoard.innerText = "00000";
         if (playerImg.complete && playerImg.naturalWidth !== 0) {{ dibujarAvatar(); }} else {{ dibujarFallback(); }}
         document.querySelectorAll('.obstacle').forEach(el => el.remove());
-
-        scoreInterval = setInterval(() => {{
-            score += 1;
-            scoreBoard.innerText = score.toString().padStart(5, '0');
-            if (score % 150 === 0) {{ gameSpeed += 0.5; }}
-        }}, 100);
-
+        scoreInterval = setInterval(() => {{ score += 1; scoreBoard.innerText = score.toString().padStart(5, '0'); if (score % 150 === 0) {{ gameSpeed += 0.5; }} }}, 100);
         createObstacle();
     }}
 
     function gameOver() {{
         isGameOver = true;
         player.classList.remove("jump");
-        clearTimeout(obstacleTimer);
         clearInterval(scoreInterval);
         restartMessage.style.display = "block";
-        // Ya no recargamos la ventana, dejamos el marcador fijo en pantalla para que el jugador lo lea
+        
+        // 🚀 AUTOMATIZACIÓN BRUTAL: Mandamos los puntos directo a la URL de la web raíz
+        setTimeout(() => {{
+            window.top.location.href = '/?game_score=' + score;
+        }}, 800);
     }}
 
     function resetGame() {{ startGame(); }}
@@ -716,36 +611,51 @@ html_dino = f"""
 
 components.html(html_dino, height=280)
 
+
 # ==============================================================================
-# --- 🛠️ FORMULARIO FIJO DE GUARDADO DE PUNTUACIÓN Y HORA ---
+# --- 🛠️ NUEVA LÓGICA: DETECCIÓN AUTOMÁTICA Y GUARDADO TOTAL ---
 # ==============================================================================
 st.markdown("### 💾 Guardar Récord del Dino")
-st.write("Cuando termines tu partida, selecciona tu nombre e introduce los puntos que has conseguido:")
 
-if jugadores_dino:
-    with st.form("guardar_record_dino_fijo", clear_on_submit=True):
-        col_usr, col_pts = st.columns(2)
-        
-        with col_usr:
-            jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_dino, key="dino_user_fijo")
+# Capturamos la puntuación de la URL de forma totalmente automática
+puntos_detectados = None
+if "game_score" in st.query_params:
+    try:
+        puntos_detectados = int(st.query_params["game_score"])
+    except ValueError:
+        puntos_detectados = None
+
+# Si la web detecta puntos, abre el panel de guardado al instante
+if puntos_detectados is not None:
+    st.info(f"🎯 **¡Partida terminada detectada!** Tu puntuación ha sido de: **{puntos_detectados} puntos**")
+    
+    if jugadores_dino:
+        with st.form("guardar_record_dino_automatico", clear_on_submit=True):
+            # El usuario ya NO escribe puntos, solo elige su nombre
+            jugador_seleccionado = st.selectbox("Selecciona tu nombre para registrar la marca:", jugadores_dino, key="dino_user_auto")
+            submit_record = st.form_submit_button("🥇 Inmortalizar mi Puntuación")
             
-        with col_pts:
-            puntos_introducidos = st.number_input("Puntos conseguidos en pantalla:", min_value=0, max_value=99999, step=1, value=0)
-            
-        submit_record = st.form_submit_button("💾 Inmortalizar Récord y Hora")
-        
-        if submit_record:
-            if puntos_introducidos > 0:
-                # Obtenemos la hora del servidor en formato HH:MM:SS
+            if submit_record and jugador_seleccionado:
+                # Captura automática de la hora exacta
                 hora_actual = datetime.now().strftime("%H:%M:%S")
                 
-                # Montamos la cadena final que va al historial
-                nombre_registro = f"{jugador_seleccionado} (Dino: {puntos_introducidos} pts a las {hora_actual})"
+                # Formato final con puntos y hora exacta
+                nombre_registro = f"{jugador_seleccionado} (Dino: {puntos_detectados} pts a las {hora_actual})"
                 
                 guardar_ganador(nombre_registro)
-                st.success(f"¡Brutal! Guardado el récord de {jugador_seleccionado} ({puntos_introducidos} pts) a las {hora_actual}.")
+                st.success(f"¡Récord de {jugador_seleccionado} ({puntos_detectados} pts) guardado a las {hora_actual}!")
+                
+                # Limpiamos el marcador de la URL para que la web quede lista para otra partida
+                del st.query_params["game_score"]
                 st.rerun()
-            else:
-                st.error("❌ ¡La puntuación debe ser mayor que 0 para guardarse!")
+                
+        if st.button("❌ Descartar puntos y limpiar"):
+            del st.query_params["game_score"]
+            st.rerun()
+    else:
+        st.warning("⚠️ Todos los jugadores ya han guardado su récord en el Dino.")
+        if st.button("🔄 Reiniciar lista"):
+            del st.query_params["game_score"]
+            st.rerun()
 else:
-    st.warning("⚠️ Todos los jugadores de la lista ya han guardado su puntuación en este minijuego.")
+    st.caption("🏃‍♂️ Juega una partida. En cuanto pierdas, aparecerá aquí tu puntuación lista para guardar con un solo clic.")

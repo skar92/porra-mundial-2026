@@ -144,13 +144,12 @@ st.plotly_chart(fig_lineas, use_container_width=True)
 
 
 
-
-
 import streamlit as st
 import random
 import json
 import os
 import base64
+from datetime import datetime  # <--- Añadido para controlar el tiempo exacto
 
 # ==============================================================================
 # --- 📊 CONTROL DE JUGADORES POR JUEGO (INDEPENDIENTES) ---
@@ -161,13 +160,12 @@ df_ganadores = listar_ganadores()
 registros_reales = []
 
 if not df_ganadores.empty:
-    # Pasamos todo el historial a una lista limpia de textos en minúsculas
     registros_reales = [str(val).strip().lower() for val in df_ganadores.values.flatten()]
 
-# 🧩 FILTRO SOPA: El nombre desaparece si está guardado de forma exacta (ej: "ejkar")
+# 🧩 FILTRO SOPA: Desaparece si el nombre está tal cual
 jugadores_sopa = [p for p in JUGADORES_BASE if p.lower() not in registros_reales]
 
-# 🦖 FILTRO DINO: El nombre desaparece si ya tiene un registro con puntuación (ej: "ejkar (dino:")
+# 🦖 FILTRO DINO: Desaparece si ya tiene una línea que empiece por su nombre + (dino:
 jugadores_dino = [p for p in JUGADORES_BASE if not any(r.startswith(f"{p.lower()} (dino:") for r in registros_reales)]
 
 
@@ -239,8 +237,7 @@ html_game = f"""
 <style>
     body {{
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        margin: 0; padding: 5px;
-        background-color: transparent;
+        margin: 0; padding: 5px; background-color: transparent;
         display: flex; flex-direction: column; align-items: center;
         user-select: none; -webkit-user-select: none;
     }}
@@ -494,16 +491,16 @@ carpeta_del_script = os.path.dirname(os.path.abspath(__file__))
 ruta_foto_jugador = os.path.join(carpeta_del_script, "jugador.png")
 
 img_base64 = ""
-
 if os.path.exists(ruta_foto_jugador):
     try:
         with open(ruta_foto_jugador, "rb") as f:
             img_base64 = base64.b64encode(f.read()).decode("utf-8").replace("\n", "").replace("\r", "")
     except Exception as e:
-        st.error(f"⚠️ Se encontró el archivo pero no se pudo procesar: {e}")
+        st.error(f"⚠️ Error al procesar imagen: {e}")
 else:
     st.error(f"❌ **No se encuentra 'jugador.png'** en la carpeta del script.")
 
+# NOTA: He eliminado el redireccionamiento problemático de la función gameOver() en JS
 html_dino = f"""
 <!DOCTYPE html>
 <html>
@@ -596,12 +593,8 @@ html_dino = f"""
         playerImg.src = "data:image/png;base64," + b64Data;
     }}
     
-    playerImg.onload = function() {{
-        dibujarAvatar();
-    }};
-    playerImg.onerror = function() {{
-        dibujarFallback();
-    }};
+    playerImg.onload = function() {{ dibujarAvatar(); }};
+    playerImg.onerror = function() {{ dibujarFallback(); }};
 
     function dibujarAvatar() {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -611,21 +604,14 @@ html_dino = f"""
     function dibujarFallback() {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#3498db";
-        ctx.beginPath();
-        ctx.arc(50, 50, 45, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 30px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("⚽", 50, 50);
+        ctx.beginPath(); ctx.arc(50, 50, 45, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#ffffff"; ctx.font = "bold 30px sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⚽", 50, 50);
     }}
 
     function jump(e) {{
         if (isGameOver) {{
-            if (e.code === 'Space' || e.type === 'touchstart' || e.code === 'ArrowUp') {{
-                resetGame();
-            }}
+            if (e.code === 'Space' || e.type === 'touchstart' || e.code === 'ArrowUp') {{ resetGame(); }}
             return;
         }}
         if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
@@ -657,10 +643,7 @@ html_dino = f"""
         container.appendChild(obstacle);
 
         let moveInterval = setInterval(() => {{
-            if (isGameOver) {{
-                clearInterval(moveInterval);
-                return;
-            }}
+            if (isGameOver) {{ clearInterval(moveInterval); return; }}
             
             obstaclePos -= gameSpeed;
             obstacle.style.left = obstaclePos + 'px';
@@ -682,9 +665,7 @@ html_dino = f"""
                         gameSpeed += 0.2;
                     }}
                 }} else {{
-                    if (playerBottom < 45) {{
-                        gameOver();
-                    }}
+                    if (playerBottom < 45) {{ gameOver(); }}
                 }}
             }}
         }}, 10);
@@ -702,21 +683,15 @@ html_dino = f"""
         gameSpeed = 6;
         restartMessage.style.display = "none";
         player.style.bottom = "0px";
+        scoreBoard.innerText = "00000";
         
-        if (playerImg.complete && playerImg.naturalWidth !== 0) {{
-            dibujarAvatar();
-        }} else {{
-            dibujarFallback();
-        }}
-        
+        if (playerImg.complete && playerImg.naturalWidth !== 0) {{ dibujarAvatar(); }} else {{ dibujarFallback(); }}
         document.querySelectorAll('.obstacle').forEach(el => el.remove());
 
         scoreInterval = setInterval(() => {{
             score += 1;
             scoreBoard.innerText = score.toString().padStart(5, '0');
-            if (score % 150 === 0) {{
-                gameSpeed += 0.5;
-            }}
+            if (score % 150 === 0) {{ gameSpeed += 0.5; }}
         }}, 100);
 
         createObstacle();
@@ -728,21 +703,11 @@ html_dino = f"""
         clearTimeout(obstacleTimer);
         clearInterval(scoreInterval);
         restartMessage.style.display = "block";
-        
-        setTimeout(() => {{
-            const url = new URL(window.location.href);
-            url.searchParams.set("game_score", score);
-            window.parent.location.href = url.toString();
-        }}, 600);
+        // Ya no recargamos la ventana, dejamos el marcador fijo en pantalla para que el jugador lo lea
     }}
 
-    function resetGame() {{
-        startGame();
-    }}
-
-    if (!b64Data || b64Data.length === 0) {{
-        dibujarFallback();
-    }}
+    function resetGame() {{ startGame(); }}
+    if (!b64Data || b64Data.length === 0) {{ dibujarFallback(); }}
     startGame();
 </script>
 </body>
@@ -752,34 +717,35 @@ html_dino = f"""
 components.html(html_dino, height=280)
 
 # ==============================================================================
-# --- 🛠️ NUEVA LOGICA: PANEL DE GUARDADO TRAS GAME OVER (FIJO Y ESTABLE) ---
+# --- 🛠️ FORMULARIO FIJO DE GUARDADO DE PUNTUACIÓN Y HORA ---
 # ==============================================================================
-if "game_score" in st.query_params:
-    puntos_actuales = int(st.query_params["game_score"])
-    
-    st.info(f"💀 **¡Game Over!** Conseguiste una puntuación de: **{puntos_actuales} puntos**")
-    
-    if jugadores_dino:
-        with st.form("guardar_record_dino"):
-            jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_dino, key="dino_user")
-            submit_record = st.form_submit_button("💾 Guardar récord en el Salón de la Fama")
-            
-            if submit_record and jugador_seleccionado:
-                nombre_registro = f"{jugador_seleccionado} (Dino: {puntos_actuales} pts)"
-                guardar_ganador(nombre_registro)
-                st.success(f"¡Récord de {jugador_seleccionado} inmortalizado con éxito!")
-                
-                # Al guardar con éxito, eliminamos el parámetro para limpiar la app
-                del st.query_params["game_score"]
-                st.rerun()
+st.markdown("### 💾 Guardar Récord del Dino")
+st.write("Cuando termines tu partida, selecciona tu nombre e introduce los puntos que has conseguido:")
+
+if jugadores_dino:
+    with st.form("guardar_record_dino_fijo", clear_on_submit=True):
+        col_usr, col_pts = st.columns(2)
         
-        # Botón extra para quitar el cartel si no quieren guardar la puntuación
-        if st.button("❌ Descartar puntuación y volver a intentar"):
-            del st.query_params["game_score"]
-            st.rerun()
+        with col_usr:
+            jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_dino, key="dino_user_fijo")
             
-    else:
-        st.warning("⚠️ Todos los jugadores ya han guardado su récord en el minijuego.")
-        if st.button("🔄 Volver a jugar"):
-            del st.query_params["game_score"]
-            st.rerun()
+        with col_pts:
+            puntos_introducidos = st.number_input("Puntos conseguidos en pantalla:", min_value=0, max_value=99999, step=1, value=0)
+            
+        submit_record = st.form_submit_button("💾 Inmortalizar Récord y Hora")
+        
+        if submit_record:
+            if puntos_introducidos > 0:
+                # Obtenemos la hora del servidor en formato HH:MM:SS
+                hora_actual = datetime.now().strftime("%H:%M:%S")
+                
+                # Montamos la cadena final que va al historial
+                nombre_registro = f"{jugador_seleccionado} (Dino: {puntos_introducidos} pts a las {hora_actual})"
+                
+                guardar_ganador(nombre_registro)
+                st.success(f"¡Brutal! Guardado el récord de {jugador_seleccionado} ({puntos_introducidos} pts) a las {hora_actual}.")
+                st.rerun()
+            else:
+                st.error("❌ ¡La puntuación debe ser mayor que 0 para guardarse!")
+else:
+    st.warning("⚠️ Todos los jugadores de la lista ya han guardado su puntuación en este minijuego.")

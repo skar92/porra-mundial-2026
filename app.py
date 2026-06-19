@@ -456,9 +456,8 @@ with col_registro:
 
 
 
-
 # ==============================================================================
-# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (VERSIÓN RADAR DE RUTAS) ---
+# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN RELATIVA ABSOLUTA) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
@@ -476,29 +475,22 @@ if puntuacion_recibida is not None:
     st.session_state.puntos_dino = int(puntuacion_recibida)
     st.query_params.clear()
 
-# 1. BÚSQUEDA INTELIGENTE DEL ARCHIVO
-rutas_posibles = [
-    "jugador.png",
-    "static/jugador.png",
-    "ChatGPT Image 18 jun 2026, 14_36_28.png",
-    "static/ChatGPT Image 18 jun 2026, 14_36_28.png"
-]
-
-ruta_correcta = None
-for ruta in rutas_posibles:
-    if os.path.exists(ruta):
-        ruta_correcta = ruta
-        break
+# FORZAR BUSQUEDA EN LA RUTA REAL DEL SCRIPT (Ruta absoluta)
+carpeta_del_script = os.path.dirname(os.path.abspath(__file__))
+ruta_foto_jugador = os.path.join(carpeta_del_script, "jugador.png")
 
 img_base64 = ""
-if ruta_correcta:
+
+if os.path.exists(ruta_foto_jugador):
     try:
-        with open(ruta_correcta, "rb") as f:
+        with open(ruta_foto_jugador, "rb") as f:
             img_base64 = base64.b64encode(f.read()).decode("utf-8").replace("\n", "").replace("\r", "")
     except Exception as e:
-        st.error(f"⚠️ El archivo se encontró pero no se pudo leer: {e}")
+        st.error(f"⚠️ Se encontró el archivo pero no se pudo procesar: {e}")
 else:
-    st.error("❌ **ERROR DE RUTA:** Python no encuentra la imagen. Asegúrate de que la foto está en la misma carpeta que este script de Python.")
+    st.error(f"❌ **No se encuentra 'jugador.png'** en la carpeta del script.")
+    st.write("Ficheros detectados actualmente en esta carpeta:", os.listdir(carpeta_del_script))
+    st.warning("💡 Si estás desplegando en Streamlit Cloud, asegúrate de haber fusionado (merged) la rama 'static' con tu rama principal ('main'), de lo contrario el servidor no verá la foto.")
 
 html_dino = f"""
 <!DOCTYPE html>
@@ -736,7 +728,6 @@ html_dino = f"""
         startGame();
     }}
 
-    // Iniciar juego solo si no hay data pendiente o falló
     if (!b64Data || b64Data.length === 0) {{
         dibujarFallback();
     }}

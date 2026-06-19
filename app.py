@@ -136,8 +136,45 @@ fig_lineas.update_xaxes(type='category')
 st.plotly_chart(fig_lineas, use_container_width=True)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+import streamlit as st
+import random
+import json
+import os
+import base64
+
 # ==============================================================================
-# --- 🧩 SOPA DE LETRAS SIN DUPLICADOS (NUEVA CORRECCIÓN) ---
+# --- 📊 CONTROL DE JUGADORES POR JUEGO (INDEPENDIENTES) ---
+# ==============================================================================
+JUGADORES_BASE = ["telenti", "juan", "mirete", "carlos", "miguel angel", "sierra", "ejkar"]
+
+df_ganadores = listar_ganadores()
+registros_reales = []
+
+if not df_ganadores.empty:
+    # Pasamos todo el historial a una lista limpia de textos en minúsculas
+    registros_reales = [str(val).strip().lower() for val in df_ganadores.values.flatten()]
+
+# 🧩 FILTRO SOPA: El nombre desaparece si está guardado de forma exacta (ej: "ejkar")
+jugadores_sopa = [p for p in JUGADORES_BASE if p.lower() not in registros_reales]
+
+# 🦖 FILTRO DINO: El nombre desaparece si ya tiene un registro con puntuación (ej: "ejkar (dino:")
+jugadores_dino = [p for p in JUGADORES_BASE if not any(r.startswith(f"{p.lower()} (dino:") for r in registros_reales)]
+
+
+# ==============================================================================
+# --- 🧩 SOPA DE LETRAS SIN DUPLICADOS ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🧩 Sopa de Letras Interactiva: Encuentra los 20 Juanes")
@@ -150,14 +187,11 @@ def generar_sopa_juan_sin_clones():
     word = "JUAN"
     direcciones = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
     
-    # Cambiamos la semilla aleatoria para generar una distribución nueva y limpia
     random.seed(101) 
     
     colocados = 0
     intentos = 0
     juanes_coordenadas = []
-    
-    # Conjunto para registrar estrictamente el pack único de (Fila Inicial, Columna Inicial, Dirección)
     registro_coordenadas = set()
     
     while colocados < 20 and intentos < 4000:
@@ -166,7 +200,6 @@ def generar_sopa_juan_sin_clones():
         r = random.randint(0, tam - 1)
         c = random.randint(0, tam - 1)
         
-        # Filtro estricto: Si la posición y dirección ya han sido usadas, se ignora por completo
         if (r, c, d) in registro_coordenadas:
             continue
             
@@ -275,7 +308,6 @@ html_game = f"""
     
     const gridContainer = document.getElementById('soup-grid');
     
-    // Crear celdas
     for(let r=0; r<15; r++) {{
         for(let c=0; c<15; c++) {{
             const cell = document.createElement('div');
@@ -288,7 +320,6 @@ html_game = f"""
         }}
     }}
     
-    // CONTROL DE MOUSE (ESCRITORIO)
     gridContainer.addEventListener('mousedown', (e) => {{
         if(e.target.classList.contains('cell')) {{
             isDragging = true;
@@ -315,7 +346,6 @@ html_game = f"""
         document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
     }});
 
-    // CONTROL TÁCTIL (MÓVILES - EVITA EL SCROLL)
     gridContainer.addEventListener('touchstart', (e) => {{
         let touch = e.touches[0];
         let el = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -431,42 +461,38 @@ with col_registro:
     
     if codigo_verificador.strip() == "JUANETE!!":
         st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
-        with st.form("salon_fama_form", clear_on_submit=True):
-            nombre_jugador = st.text_input("Tu Nombre / Alias:")
-            enviar_nombre = st.form_submit_button("🥇 Inmortalizar mi Nombre")
-            
-            if enviar_nombre and nombre_jugador:
-                guardar_ganador(nombre_jugador)
-                st.success(f"¡Brutal! {nombre_jugador} ha sido registrado oficialmente.")
-                st.rerun()
+        
+        if jugadores_sopa:
+            with st.form("salon_fama_form", clear_on_submit=True):
+                # Usamos la lista exclusiva filtrada para la Sopa
+                jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_sopa, key="sopa_user")
+                enviar_nombre = st.form_submit_button("🥇 Inmortalizar mi Nombre")
+                
+                if enviar_nombre and jugador_seleccionado:
+                    guardar_ganador(jugador_seleccionado)
+                    st.success(f"¡Brutal! {jugador_seleccionado} ha sido registrado oficialmente.")
+                    st.rerun()
+        else:
+            st.warning("⚠️ Todos los jugadores ya han completado y guardado la sopa.")
     else:
         if codigo_verificador:
             st.error("Código incorrecto. Asegúrate de cazar los 20 Juanes completos.")
 
     st.markdown("---")
     st.markdown("### 🌟 Historial de Ganadores")
-    df_ganadores = listar_ganadores()
     if not df_ganadores.empty:
         st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
     else:
         st.caption("Aún nadie ha completado la sopa. ¿Quién se llevará la pole?")
 
 
-
-
-
-
 # ==============================================================================
-# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN RELATIVA ABSOLUTA) ---
+# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
 st.write("¡Haz que JUAN esquive las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
-import os
-import base64
-
-# Inicializar estados de Streamlit
 if "puntos_dino" not in st.session_state:
     st.session_state.puntos_dino = None
 
@@ -475,7 +501,6 @@ if puntuacion_recibida is not None:
     st.session_state.puntos_dino = int(puntuacion_recibida)
     st.query_params.clear()
 
-# FORZAR BUSQUEDA EN LA RUTA REAL DEL SCRIPT (Ruta absoluta)
 carpeta_del_script = os.path.dirname(os.path.abspath(__file__))
 ruta_foto_jugador = os.path.join(carpeta_del_script, "jugador.png")
 
@@ -489,8 +514,6 @@ if os.path.exists(ruta_foto_jugador):
         st.error(f"⚠️ Se encontró el archivo pero no se pudo procesar: {e}")
 else:
     st.error(f"❌ **No se encuentra 'jugador.png'** en la carpeta del script.")
-    st.write("Ficheros detectados actualmente en esta carpeta:", os.listdir(carpeta_del_script))
-    st.warning("💡 Si estás desplegando en Streamlit Cloud, asegúrate de haber fusionado (merged) la rama 'static' con tu rama principal ('main'), de lo contrario el servidor no verá la foto.")
 
 html_dino = f"""
 <!DOCTYPE html>
@@ -737,23 +760,23 @@ html_dino = f"""
 </html>
 """
 
-import streamlit.components.v1 as components
 components.html(html_dino, height=280)
 
 # --- PANEL DE GUARDADO TRAS GAME OVER ---
 if st.session_state.puntos_dino is not None:
     st.info(f"💀 **¡Game Over!** Conseguiste una puntuación de: **{st.session_state.puntos_dino} puntos**")
     
-    lista_jugadores = list(porra.keys())
-    lista_jugadores.sort()
-    
-    with st.form("guardar_record_dino"):
-        jugador_seleccionado = st.selectbox("¿Quién eres?", lista_jugadores)
-        submit_record = st.form_submit_button("💾 Guardar récord en el Salón de la Fama")
-        
-        if submit_record:
-            nombre_registro = f"{jugador_seleccionado} (Dino: {st.session_state.puntos_dino} pts)"
-            guardar_ganador(nombre_registro)
-            st.success(f"¡Récord de {jugador_seleccionado} inmortalizado con éxito!")
-            st.session_state.puntos_dino = None
-            st.rerun()
+    if jugadores_dino:
+        with st.form("guardar_record_dino"):
+            # Usamos la lista exclusiva filtrada para el Dino
+            jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_dino, key="dino_user")
+            submit_record = st.form_submit_button("💾 Guardar récord en el Salón de la Fama")
+            
+            if submit_record and jugador_seleccionado:
+                nombre_registro = f"{jugador_seleccionado} (Dino: {st.session_state.puntos_dino} pts)"
+                guardar_ganador(nombre_registro)
+                st.success(f"¡Récord de {jugador_seleccionado} inmortalizado con éxito!")
+                st.session_state.puntos_dino = None
+                st.rerun()
+    else:
+        st.warning("⚠️ Todos los jugadores ya han guardado su récord en el minijuego.")

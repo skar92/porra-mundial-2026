@@ -458,27 +458,47 @@ with col_registro:
 
 
 
-
-
 # ==============================================================================
-# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN URL ESTÁTICA) ---
+# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN COMPRESIÓN PESO) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
 st.write("¡Esquiva las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
-# Inicializar un estado en Streamlit para capturar la puntuación al perder
+import base64
+import os
+
+# Inicializar estados de Streamlit
 if "puntos_dino" not in st.session_state:
     st.session_state.puntos_dino = None
 
-# Recibir la puntuación desde el JavaScript del juego de manera segura
 puntuacion_recibida = st.query_params.get("game_score", None)
 if puntuacion_recibida is not None:
     st.session_state.puntos_dino = int(puntuacion_recibida)
     st.query_params.clear()
 
-# Ruta a la URL estática interna de Streamlit
-url_foto_jugador = "app/static/jugador.png"
+# Intentar leer la foto de static/jugador.png y comprimirla a un string Base64 optimizado
+# Esto evita que el navegador se bloquee con imágenes de muchos megapíxeles
+img_base64_optimizada = ""
+ruta_estatica = os.path.join("static", "jugador.png")
+
+if os.path.exists(ruta_estatica):
+    try:
+        from PIL import Image as PILImage
+        # Abrimos la imagen original grande y la reducimos a un tamaño miniatura para el juego
+        with PILImage.open(ruta_estatica) as img:
+            img.thumbnail((120, 120)) # Lo reducimos al tamaño ideal del juego
+            import io
+            buffer = io.BytesIO()
+            img.save(buffer, format="PNG")
+            img_base64_optimizada = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    except Exception as e:
+        # Si falla PIL, intentamos lectura directa por si acaso
+        try:
+            with open(ruta_estatica, 'rb') as f:
+                img_base64_optimizada = base64.b64encode(f.read()).decode('utf-8').replace('\n', '').replace('\r', '')
+        except:
+            pass
 
 html_dino = f"""
 <!DOCTYPE html>
@@ -565,9 +585,16 @@ html_dino = f"""
     let obstacleTimer;
     let scoreInterval;
     
-    // Carga directa de la imagen usando la URL estática local
+    // Intentar cargar primero el Base64 optimizado ultraligero
+    const b64Data = "{img_base64_optimizada}";
     const playerImg = new Image();
-    playerImg.src = window.parent.location.origin + "/{url_foto_jugador}";
+    
+    if (b64Data && b64Data.length > 0) {{
+        playerImg.src = "data:image/png;base64," + b64Data;
+    }} else {{
+        // Si no hay base64, intentamos la URL estática como plan B
+        playerImg.src = window.parent.location.origin + "/app/static/jugador.png";
+    }}
     
     playerImg.onload = function() {{
         dibujarAvatar();

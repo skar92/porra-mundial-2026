@@ -452,35 +452,65 @@ with col_registro:
         st.caption("Aún nadie ha completado la sopa. ¿Quién se llevará la pole?")
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ==============================================================================
-# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN DEFINITIVA CANVAS) ---
+# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN RELATIVA ABSOLUTA) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
 st.write("¡Esquiva las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
+import os
 import base64
 
-img_path = 'jugador.png'
-img_base64 = ""
-
-if os.path.exists(img_path):
-    try:
-        with open(img_path, 'rb') as f:
-            data = f.read()
-            img_base64 = base64.b64encode(data).decode('utf-8').replace('\n', '').replace('\r', '')
-    except Exception as e:
-        st.error(f"Error al procesar jugador.png: {e}")
-
-# Inicializar un estado en Streamlit para capturar la puntuación al perder
+# Inicializar estados de Streamlit
 if "puntos_dino" not in st.session_state:
     st.session_state.puntos_dino = None
 
-# Recibir la puntuación desde el JavaScript del juego de manera segura
 puntuacion_recibida = st.query_params.get("game_score", None)
 if puntuacion_recibida is not None:
     st.session_state.puntos_dino = int(puntuacion_recibida)
     st.query_params.clear()
+
+# FORZAR BUSQUEDA EN LA RUTA REAL DEL SCRIPT (Ruta absoluta)
+carpeta_del_script = os.path.dirname(os.path.abspath(__file__))
+ruta_foto_jugador = os.path.join(carpeta_del_script, "jugador.png")
+
+img_base64 = ""
+
+if os.path.exists(ruta_foto_jugador):
+    try:
+        with open(ruta_foto_jugador, "rb") as f:
+            img_base64 = base64.b64encode(f.read()).decode("utf-8").replace("\n", "").replace("\r", "")
+    except Exception as e:
+        st.error(f"⚠️ Se encontró el archivo pero no se pudo procesar: {e}")
+else:
+    st.error(f"❌ **No se encuentra 'jugador.png'** en la carpeta del script.")
+    st.write("Ficheros detectados actualmente en esta carpeta:", os.listdir(carpeta_del_script))
+    st.warning("💡 Si estás desplegando en Streamlit Cloud, asegúrate de haber fusionado (merged) la rama 'static' con tu rama principal ('main'), de lo contrario el servidor no verá la foto.")
 
 html_dino = f"""
 <!DOCTYPE html>
@@ -567,21 +597,19 @@ html_dino = f"""
     let obstacleTimer;
     let scoreInterval;
     
-    // Cargar la imagen usando el string Base64 inyectado por Python
     const b64Data = "{img_base64}";
     const playerImg = new Image();
     
     if (b64Data && b64Data.length > 0) {{
         playerImg.src = "data:image/png;base64," + b64Data;
-        playerImg.onload = function() {{
-            dibujarAvatar();
-        }};
-        playerImg.onerror = function() {{
-            dibujarFallback();
-        }};
-    }} else {{
-        dibujarFallback();
     }}
+    
+    playerImg.onload = function() {{
+        dibujarAvatar();
+    }};
+    playerImg.onerror = function() {{
+        dibujarFallback();
+    }};
 
     function dibujarAvatar() {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -683,7 +711,6 @@ html_dino = f"""
         restartMessage.style.display = "none";
         player.style.bottom = "0px";
         
-        // Volver a asegurar que el avatar está pintado
         if (playerImg.complete && playerImg.naturalWidth !== 0) {{
             dibujarAvatar();
         }} else {{
@@ -721,6 +748,9 @@ html_dino = f"""
         startGame();
     }}
 
+    if (!b64Data || b64Data.length === 0) {{
+        dibujarFallback();
+    }}
     startGame();
 </script>
 </body>

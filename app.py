@@ -450,3 +450,287 @@ with col_registro:
         st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
     else:
         st.caption("Aún nadie ha completado la sopa. ¿Quién se llevará la pole?")
+
+
+
+
+
+
+
+
+# ==============================================================================
+# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (TIPO DINO) ---
+# ==============================================================================
+st.markdown("---")
+st.subheader("🎮 Minijuego: El Salto del Mundial")
+st.write("¡Esquiva las tarjetas rojas y las copas! Pulsa **ESPACIO**, la **FLECHA ARRIBA** o **TOCA LA PANTALLA** para saltar.")
+
+import base64
+
+# Función para codificar la imagen a Base64 para usarla en el HTML
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+# Intentar cargar la imagen del jugador
+img_path = 'jugador.png'
+if os.path.exists(img_path):
+    try:
+        img_base64 = get_base64_of_bin_file(img_path)
+        player_img_style = f"background-image: url('data:image/png;base64,{img_base64}');"
+    except Exception as e:
+        st.error(f"Error cargando la imagen: {e}")
+        player_img_style = "background-color: #3498db; border-radius: 50%;" # Placeholder si falla
+else:
+    st.warning("⚠️ No se encontró el archivo 'jugador.png'. Usando un círculo azul como placeholder.")
+    player_img_style = "background-color: #3498db; border-radius: 50%;"
+
+html_dino = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+    body {{
+        margin: 0; padding: 0;
+        overflow: hidden;
+        display: flex; justify-content: center; align-items: center;
+        background-color: transparent;
+        font-family: sans-serif;
+        user-select: none; -webkit-user-select: none;
+        touch-action: none;
+    }}
+    #game-container {{
+        width: 100%;
+        max-width: 800px;
+        height: 250px;
+        background-color: #f7f7f7;
+        border-bottom: 2px solid #535353;
+        border-radius: 8px;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+    }}
+    #player {{
+        width: 50px;
+        height: 50px;
+        position: absolute;
+        bottom: 0;
+        left: 50px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        {player_img_style}
+        z-index: 10;
+    }}
+    .obstacle {{
+        position: absolute;
+        bottom: 0;
+        z-index: 5;
+    }}
+    .cactus {{ /* Tarjeta Roja */
+        width: 30px;
+        height: 50px;
+        background-color: #e74c3c;
+        border-radius: 4px;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+    }}
+    .cactus::after {{
+        content: '🟥';
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 20px;
+    }}
+    .copa {{ /* Copa del Mundo */
+        width: 40px;
+        height: 40px;
+        background-color: #f1c40f;
+        border-radius: 50% 50% 0 0;
+    }}
+    .copa::after {{
+        content: '🏆';
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 24px;
+    }}
+    #score-board {{
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #535353;
+        font-family: monospace;
+        z-index: 15;
+    }}
+    #restart-message {{
+        display: none;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        background-color: rgba(0,0,0,0.8);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        z-index: 20;
+    }}
+    .jump {{
+        animation: jump 0.5s linear;
+    }}
+    @keyframes jump {{
+        0% {{ bottom: 0; }}
+        30% {{ bottom: 100px; }}
+        70% {{ bottom: 100px; }}
+        100% {{ bottom: 0; }}
+    }}
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="score-board">00000</div>
+    <div id="player"></div>
+    <div id="restart-message">
+        <h1>GAME OVER</h1>
+        <p>Toca o pulsa ESPACIO para reiniciar</p>
+    </div>
+</div>
+
+<script>
+    const player = document.getElementById("player");
+    const container = document.getElementById("game-container");
+    const scoreBoard = document.getElementById("score-board");
+    const restartMessage = document.getElementById("restart-message");
+    
+    let isJumping = false;
+    let isGameOver = false;
+    let score = 0;
+    let gameSpeed = 5;
+    let obstacleTimer;
+    let scoreInterval;
+    let checkCollisionInterval;
+
+    function jump(e) {{
+        // Evitar saltar si ya está saltando, si el juego terminó, o si se pulsó una tecla que no es saltar
+        if (isGameOver) {{
+            if (e.code === 'Space' || e.type === 'touchstart' || e.code === 'ArrowUp') {{
+                resetGame();
+            }}
+            return;
+        }}
+        
+        if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
+        
+        if (!isJumping) {{
+            isJumping = true;
+            player.classList.add("jump");
+            setTimeout(() => {{
+                player.classList.remove("jump");
+                isJumping = false;
+            }}, 500); // Duración de la animación
+        }}
+    }}
+
+    // Controles
+    document.addEventListener('keydown', jump);
+    container.addEventListener('touchstart', jump);
+
+    function createObstacle() {{
+        if (isGameOver) return;
+
+        const obstacle = document.createElement('div');
+        const isCopa = Math.random() > 0.7; // 30% de probabilidad de que sea copa
+        
+        obstacle.classList.add('obstacle');
+        obstacle.classList.add(isCopa ? 'copa' : 'cactus');
+        
+        // Posición inicial fuera de la pantalla a la derecha
+        obstacle.style.left = container.offsetWidth + 'px';
+        container.appendChild(obstacle);
+
+        let obstaclePos = container.offsetWidth;
+        
+        let moveInterval = setInterval(() => {{
+            if (isGameOver) {{
+                clearInterval(moveInterval);
+                return;
+            }}
+            
+            obstaclePos -= gameSpeed;
+            obstacle.style.left = obstaclePos + 'px';
+
+            // Eliminar obstáculo si sale de la pantalla
+            if (obstaclePos < -40) {{
+                clearInterval(moveInterval);
+                container.removeChild(obstacle);
+            }}
+            
+            // Verificación de colisión optimizada
+            // Solo comprobar si el obstáculo está cerca del jugador
+            if (obstaclePos > 50 && obstaclePos < 100) {{
+                // Calcular la altura actual del jugador (no se puede usar .jump directamente para coordenadas)
+                // Usamos getComputedStyle para obtener el valor real de 'bottom' durante la animación
+                let playerBottom = parseInt(window.getComputedStyle(player).getPropertyValue("bottom"));
+                let obstacleHeight = isCopa ? 40 : 50;
+
+                // Colisión si el jugador no ha saltado lo suficiente
+                if (playerBottom < obstacleHeight) {{
+                    gameOver();
+                }}
+            }}
+
+        }}, 10);
+
+        // Programar el siguiente obstáculo con tiempo aleatorio
+        let nextObstacleTime = Math.random() * (2000 - 800 / (gameSpeed/5)) + 800; 
+        obstacleTimer = setTimeout(createObstacle, nextObstacleTime);
+    }}
+
+    function startGame() {{
+        isGameOver = false;
+        score = 0;
+        gameSpeed = 5;
+        restartMessage.style.display = "none";
+        player.style.bottom = "0px";
+        
+        // Limpiar obstáculos antiguos
+        document.querySelectorAll('.obstacle').forEach(el => el.remove());
+
+        // Iniciar puntuación
+        scoreInterval = setInterval(() => {{
+            score++;
+            scoreBoard.innerText = score.toString().padStart(5, '0');
+            // Aumentar velocidad progresivamente
+            if (score % 500 === 0) {{
+                gameSpeed += 0.5;
+            }}
+        }}, 100);
+
+        // Iniciar generación de obstáculos
+        createObstacle();
+    }}
+
+    function gameOver() {{
+        isGameOver = true;
+        player.classList.remove("jump"); // Detener animación de salto
+        clearTimeout(obstacleTimer);
+        clearInterval(scoreInterval);
+        restartMessage.style.display = "block";
+    }}
+
+    function resetGame() {{
+        startGame();
+    }}
+
+    // Iniciar automáticamente al cargar
+    startGame();
+
+</script>
+</body>
+</html>
+"""
+
+components.html(html_dino, height=300)

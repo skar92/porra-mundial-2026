@@ -452,25 +452,20 @@ with col_registro:
         st.caption("Aún nadie ha completado la sopa. ¿Quién se llevará la pole?")
 
 
+
+
+
+
+
+
+
+
 # ==============================================================================
-# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN DEFINITIVA CANVAS) ---
+# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL (SOLUCIÓN URL ESTÁTICA) ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
 st.write("¡Esquiva las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
-
-import base64
-
-img_path = 'jugador.png'
-img_base64 = ""
-
-if os.path.exists(img_path):
-    try:
-        with open(img_path, 'rb') as f:
-            data = f.read()
-            img_base64 = base64.b64encode(data).decode('utf-8').replace('\n', '').replace('\r', '')
-    except Exception as e:
-        st.error(f"Error al procesar jugador.png: {e}")
 
 # Inicializar un estado en Streamlit para capturar la puntuación al perder
 if "puntos_dino" not in st.session_state:
@@ -481,6 +476,9 @@ puntuacion_recibida = st.query_params.get("game_score", None)
 if puntuacion_recibida is not None:
     st.session_state.puntos_dino = int(puntuacion_recibida)
     st.query_params.clear()
+
+# Ruta a la URL estática interna de Streamlit
+url_foto_jugador = "app/static/jugador.png"
 
 html_dino = f"""
 <!DOCTYPE html>
@@ -567,21 +565,16 @@ html_dino = f"""
     let obstacleTimer;
     let scoreInterval;
     
-    // Cargar la imagen usando el string Base64 inyectado por Python
-    const b64Data = "{img_base64}";
+    // Carga directa de la imagen usando la URL estática local
     const playerImg = new Image();
+    playerImg.src = window.parent.location.origin + "/{url_foto_jugador}";
     
-    if (b64Data && b64Data.length > 0) {{
-        playerImg.src = "data:image/png;base64," + b64Data;
-        playerImg.onload = function() {{
-            dibujarAvatar();
-        }};
-        playerImg.onerror = function() {{
-            dibujarFallback();
-        }};
-    }} else {{
+    playerImg.onload = function() {{
+        dibujarAvatar();
+    }};
+    playerImg.onerror = function() {{
         dibujarFallback();
-    }}
+    }};
 
     function dibujarAvatar() {{
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -683,7 +676,6 @@ html_dino = f"""
         restartMessage.style.display = "none";
         player.style.bottom = "0px";
         
-        // Volver a asegurar que el avatar está pintado
         if (playerImg.complete && playerImg.naturalWidth !== 0) {{
             dibujarAvatar();
         }} else {{

@@ -150,7 +150,7 @@ from datetime import datetime
 # ==============================================================================
 # --- 📊 CONTROL DE JUGADORES POR JUEGO (INDEPENDIENTES) ---
 # ==============================================================================
-JUGADORES_BASE = ["telenti", "juan", "mirete", "carlos", "miguel angel", "sierra", "ejkar"]
+JUGADORES_BASE = ["telenti", "juan", "mirete", "carlos", "miguel angel", "sierra", "ejkar", "JOAQUIN GANADOR"]
 
 df_ganadores = listar_ganadores()
 registros_reales = []

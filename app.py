@@ -140,9 +140,6 @@ st.plotly_chart(fig_lineas, use_container_width=True)
 
 
 
-
-
-
 import streamlit as st
 import random
 import json
@@ -295,124 +292,68 @@ html_game = f"""
     const gridData = {json.dumps(grid_sopa)};
     const targetWords = {json.dumps(lista_juanes)};
     
-    let isDragging = false;
-    let startCell = null;
-    let currentEndCell = null;
-    let foundIndexes = [];
-    
+    let isDragging = false; let startCell = null; let currentEndCell = null; let foundIndexes = [];
     const gridContainer = document.getElementById('soup-grid');
     
     for(let r=0; r<15; r++) {{
         for(let c=0; c<15; c++) {{
             const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.innerText = gridData[r][c];
-            cell.setAttribute('data-r', r);
-            cell.setAttribute('data-c', c);
-            cell.id = `c-${{r}}-${{c}}`;
-            gridContainer.appendChild(cell);
+            cell.className = 'cell'; cell.innerText = gridData[r][c];
+            cell.setAttribute('data-r', r); cell.setAttribute('data-c', c);
+            cell.id = `c-${{r}}-${{c}}`; gridContainer.appendChild(cell);
         }}
     }}
     
     gridContainer.addEventListener('mousedown', (e) => {{
-        if(e.target.classList.contains('cell')) {{
-            isDragging = true;
-            startCell = getCoords(e.target);
-            currentEndCell = startCell;
-            highlightCells(startCell, startCell);
-        }}
+        if(e.target.classList.contains('cell')) {{ isDragging = true; startCell = getCoords(e.target); currentEndCell = startCell; highlightCells(startCell, startCell); }}
     }});
-    
     gridContainer.addEventListener('mousemove', (e) => {{
         if (!isDragging) return;
         let el = document.elementFromPoint(e.clientX, e.clientY);
-        if(el && el.classList.contains('cell')) {{
-            let cellCoords = getCoords(el);
-            currentEndCell = cellCoords;
-            highlightCells(startCell, cellCoords);
-        }}
+        if(el && el.classList.contains('cell')) {{ let cellCoords = getCoords(el); currentEndCell = cellCoords; highlightCells(startCell, cellCoords); }}
     }});
-    
     window.addEventListener('mouseup', () => {{
-        if (!isDragging) return;
-        isDragging = false;
-        checkWord(startCell, currentEndCell);
+        if (!isDragging) return; isDragging = false; checkWord(startCell, currentEndCell);
         document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
     }});
-
     gridContainer.addEventListener('touchstart', (e) => {{
-        let touch = e.touches[0];
-        let el = document.elementFromPoint(touch.clientX, touch.clientY);
-        if(el && el.classList.contains('cell')) {{
-            e.preventDefault(); 
-            isDragging = true;
-            startCell = getCoords(el);
-            currentEndCell = startCell;
-            highlightCells(startCell, startCell);
-        }}
+        let touch = e.touches[0]; let el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if(el && el.classList.contains('cell')) {{ e.preventDefault(); isDragging = true; startCell = getCoords(el); currentEndCell = startCell; highlightCells(startCell, startCell); }}
     }}, {{passive: false}});
-    
     gridContainer.addEventListener('touchmove', (e) => {{
-        if (!isDragging) return;
-        e.preventDefault(); 
-        let touch = e.touches[0];
-        let el = document.elementFromPoint(touch.clientX, touch.clientY);
-        if(el && el.classList.contains('cell')) {{
-            let cellCoords = getCoords(el);
-            currentEndCell = cellCoords;
-            highlightCells(startCell, cellCoords);
-        }}
+        if (!isDragging) return; e.preventDefault(); let touch = e.touches[0]; let el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if(el && el.classList.contains('cell')) {{ let cellCoords = getCoords(el); currentEndCell = cellCoords; highlightCells(startCell, cellCoords); }}
     }}, {{passive: false}});
-    
     gridContainer.addEventListener('touchend', (e) => {{
-        if (!isDragging) return;
-        isDragging = false;
-        checkWord(startCell, currentEndCell);
+        if (!isDragging) return; isDragging = false; checkWord(startCell, currentEndCell);
         document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
     }}, {{passive: false}});
 
-    function getCoords(el) {{
-        return {{ r: parseInt(el.getAttribute('data-r')), c: parseInt(el.getAttribute('data-c')) }};
-    }}
-    
+    function getCoords(el) {{ return {{ r: parseInt(el.getAttribute('data-r')), c: parseInt(el.getAttribute('data-c')) }}; }}
     function getLineCells(start, end) {{
-        let dr = end.r - start.r; let dc = end.c - start.c;
-        let steps = Math.max(Math.abs(dr), Math.abs(dc));
-        if (steps !== 3) return null; 
-        if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null; 
-        let stepR = dr === 0 ? 0 : dr / steps;
-        let stepC = dc === 0 ? 0 : dc / steps;
-        let path = [];
-        for(let i=0; i<=steps; i++) {{ path.push({{r: start.r + stepR*i, c: start.c + stepC*i}}); }}
+        let dr = end.r - start.r; let dc = end.c - start.c; let steps = Math.max(Math.abs(dr), Math.abs(dc));
+        if (steps !== 3) return null; if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null;
+        let stepR = dr === 0 ? 0 : dr / steps; let stepC = dc === 0 ? 0 : dc / steps;
+        let path = []; for(let i=0; i<=steps; i++) {{ path.push({{r: start.r + stepR*i, c: start.c + stepC*i}}); }}
         return path;
     }}
-    
     function highlightCells(start, end) {{
         document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
         let path = getLineCells(start, end);
-        if (path) {{
-            path.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('dragging'); }});
-        }} else {{
-            document.getElementById(`c-${{start.r}}-${{start.c}}`).classList.add('dragging');
-        }}
+        if (path) {{ path.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('dragging'); }}); }}
+        else {{ document.getElementById(`c-${{start.r}}-${{start.c}}`).classList.add('dragging'); }}
     }}
-    
     function checkWord(start, end) {{
-        if(!start || !end) return;
-        let path = getLineCells(start, end);
-        if (!path) return;
-        
+        if(!start || !end) return; let path = getLineCells(start, end); if (!path) return;
         for(let i=0; i<targetWords.length; i++) {{
             if (foundIndexes.includes(i)) continue;
-            let target = targetWords[i];
-            let matchForward = true, matchBackward = true;
+            let target = targetWords[i]; let matchForward = true, matchBackward = true;
             for(let j=0; j<4; j++) {{
                 if(path[j].r !== target[j].r || path[j].c !== target[j].c) matchForward = false;
                 if(path[j].r !== target[3-j].r || path[j].c !== target[3-j].c) matchBackward = false;
             }}
             if (matchForward || matchBackward) {{
-                foundIndexes.push(i);
-                target.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('found'); }});
+                foundIndexes.push(i); target.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('found'); }});
                 document.getElementById('counter').innerText = foundIndexes.length;
                 if (foundIndexes.length === 20) {{ document.getElementById('win-banner').style.display = 'block'; }}
                 break;
@@ -425,38 +366,33 @@ html_game = f"""
 """
 
 col_sopa, col_registro = st.columns([1.1, 0.9])
-
 with col_sopa:
     components.html(html_game, height=560)
 
 with col_registro:
     st.markdown("### 🏆 Canjear Código de Victoria")
-    st.write("Cuando la sopa interactiva te dé el código secreto al hallar los 20 Juanes, pégalo aquí abajo:")
-    
-    codigo_verificador = st.text_input("Introduce el código de la sopa:", type="password")
+    st.write("Introduce el código de la sopa para desbloquear el registro:")
+    codigo_verificador = st.text_input("Código secreto:", type="password")
     
     if codigo_verificador.strip() == "JUANETE!!":
-        st.success("🔓 ¡CÓDIGO VERIFICADO! Has desbloqueado el acceso al Salón de la Fama.")
+        st.success("🔓 ¡CÓDIGO VERIFICADO!")
         if jugadores_sopa:
             with st.form("salon_fama_form", clear_on_submit=True):
                 jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_sopa, key="sopa_user")
                 enviar_nombre = st.form_submit_button("🥇 Inmortalizar mi Nombre")
                 if enviar_nombre and jugador_seleccionado:
                     guardar_ganador(jugador_seleccionado)
-                    st.success(f"¡Brutal! {jugador_seleccionado} ha sido registrado oficialmente.")
+                    st.success(f"¡Registrado {jugador_seleccionado}!")
                     st.rerun()
         else:
-            st.warning("⚠️ Todos los jugadores ya han completado y guardado la sopa.")
-    else:
-        if codigo_verificador:
-            st.error("Código incorrecto. Asegúrate de cazar los 20 Juanes completos.")
+            st.warning("⚠️ Todos registrados en la sopa.")
+    elif codigo_verificador:
+        st.error("Código incorrecto.")
 
     st.markdown("---")
     st.markdown("### 🌟 Historial de Ganadores")
     if not df_ganadores.empty:
         st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
-    else:
-        st.caption("Aún nadie ha completado la sopa. ¿Quién se llevará la pole?")
 
 
 # ==============================================================================
@@ -464,7 +400,7 @@ with col_registro:
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎮 Minijuego: El Salto del Mundial")
-st.write("¡Haz que JUAN esquive las **tarjetas rojas (🟥)** y recolecta las **copas (🏆)** para ganar +50 puntos! Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
+st.write("Esquiva las **tarjetas rojas (🟥)** y junta **copas (🏆)**. Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
 carpeta_del_script = os.path.dirname(os.path.abspath(__file__))
 ruta_foto_jugador = os.path.join(carpeta_del_script, "jugador.png")
@@ -475,26 +411,17 @@ if os.path.exists(ruta_foto_jugador):
         with open(ruta_foto_jugador, "rb") as f:
             img_base64 = base64.b64encode(f.read()).decode("utf-8").replace("\n", "").replace("\r", "")
     except Exception as e:
-        st.error(f"⚠️ Error al procesar imagen: {e}")
+        st.error(f"⚠️ Error de imagen: {e}")
 
-# 🛠️ CORRECCIÓN AQUÍ: Se modificó 'gameOver()' en JS para recargar la ventana madre de forma correcta
+# 🛠️ CORRECCIÓN CLAVE: El mensaje de reinicio ahora tiene un botón de acción real del usuario
 html_dino = f"""
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-    body {{
-        margin: 0; padding: 0; overflow: hidden;
-        display: flex; justify-content: center; align-items: center;
-        background-color: transparent; font-family: sans-serif;
-        user-select: none; -webkit-user-select: none; touch-action: none;
-    }}
-    #game-container {{
-        width: 100%; max-width: 800px; height: 250px;
-        background-color: #f7f7f7; border-bottom: 2px solid #535353;
-        border-radius: 8px; position: relative; overflow: hidden; cursor: pointer;
-    }}
+    body {{ margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; background-color: transparent; font-family: sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }}
+    #game-container {{ width: 100%; max-width: 800px; height: 250px; background-color: #f7f7f7; border-bottom: 2px solid #535353; border-radius: 8px; position: relative; overflow: hidden; cursor: pointer; }}
     #player {{ width: 80px; height: 70px; position: absolute; bottom: 0; left: 50px; z-index: 10; }}
     #player-canvas {{ width: 100%; height: 100%; display: block; }}
     .obstacle {{ position: absolute; bottom: 0; z-index: 5; }}
@@ -503,7 +430,17 @@ html_dino = f"""
     .copa {{ width: 35px; height: 35px; bottom: 50px; }}
     .copa::after {{ content: '🏆'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; }}
     #score-board {{ position: absolute; top: 10px; right: 20px; font-size: 20px; font-weight: bold; color: #535353; font-family: monospace; z-index: 15; }}
-    #restart-message {{ display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background-color: rgba(0,0,0,0.85); color: white; padding: 15px 30px; border-radius: 10px; z-index: 20; }}
+    
+    #restart-message {{ 
+        display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+        text-align: center; background-color: rgba(0,0,0,0.9); color: white; padding: 15px 25px; border-radius: 12px; z-index: 20; 
+    }}
+    .save-btn {{
+        background-color: #2ecc71; color: white; border: none; padding: 8px 16px; 
+        border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: background 0.2s;
+    }}
+    .save-btn:hover {{ background-color: #27ae60; }}
     .jump {{ animation: jump 0.45s linear; }}
     @keyframes jump {{ 0% {{ bottom: 0; }} 30% {{ bottom: 130px; }} 70% {{ bottom: 130px; }} 100% {{ bottom: 0; }} }}
 </style>
@@ -513,7 +450,13 @@ html_dino = f"""
 <div id="game-container">
     <div id="score-board">00000</div>
     <div id="player"><canvas id="player-canvas" width="100" height="100"></canvas></div>
-    <div id="restart-message"><h2 style="margin:0 0 5px 0;">GAME OVER</h2><p style="margin:0;">Toca o Espacio para reiniciar</p></div>
+    <div id="restart-message">
+        <h2 style="margin:0 0 5px 0; color:#e74c3c;">GAME OVER</h2>
+        <div id="final-score-text" style="font-weight:bold; margin-bottom:5px;">Puntos: 0</div>
+        <!-- BOTÓN DE GUARDADO REAL: Inmune a bloqueos de popups -->
+        <button id="save-score-action" class="save-btn">💾 Enviar Puntos abajo</button>
+        <p style="margin:8px 0 0 0; font-size:11px; color:#aaa;">O pulsa Espacio/Toca para reiniciar partida</p>
+    </div>
 </div>
 
 <script>
@@ -523,6 +466,8 @@ html_dino = f"""
     const container = document.getElementById("game-container");
     const scoreBoard = document.getElementById("score-board");
     const restartMessage = document.getElementById("restart-message");
+    const finalScoreText = document.getElementById("final-score-text");
+    const saveScoreAction = document.getElementById("save-score-action");
     
     let isJumping = false; let isGameOver = false; let score = 0; let gameSpeed = 6; let obstacleTimer; let scoreInterval;
     const b64Data = "{img_base64}"; const playerImg = new Image();
@@ -535,6 +480,8 @@ html_dino = f"""
 
     function jump(e) {{
         if (isGameOver) {{
+            // Si hacen clic en el botón de guardar, no reiniciamos el juego
+            if(e.target && e.target.id === 'save-score-action') return;
             if (e.code === 'Space' || e.type === 'touchstart' || e.code === 'ArrowUp') {{ resetGame(); }}
             return;
         }}
@@ -559,8 +506,7 @@ html_dino = f"""
 
         let moveInterval = setInterval(() => {{
             if (isGameOver) {{ clearInterval(moveInterval); return; }}
-            obstaclePos -= gameSpeed;
-            obstacle.style.left = obstaclePos + 'px';
+            obstaclePos -= gameSpeed; obstacle.style.left = obstaclePos + 'px';
             if (obstaclePos < -40) {{ clearInterval(moveInterval); obstacle.remove(); }}
             
             if (obstaclePos > 45 && obstaclePos < 95) {{
@@ -578,7 +524,7 @@ html_dino = f"""
 
         let minTiempo = Math.max(600, 1000 - (gameSpeed * 40));
         let maxTiempo = Math.max(1200, 2000 - (gameSpeed * 60));
-        setTimeout(createObstacle, Math.random() * (maxTiempo - minTiempo) + minTiempo);
+        obstacleTimer = setTimeout(createObstacle, Math.random() * (maxTiempo - minTiempo) + minTiempo);
     }}
 
     function startGame() {{
@@ -592,13 +538,18 @@ html_dino = f"""
     function gameOver() {{
         isGameOver = true;
         player.classList.remove("jump");
+        clearTimeout(obstacleTimer);
         clearInterval(scoreInterval);
+        
+        finalScoreText.innerText = "Has conseguido: " + score + " pts";
         restartMessage.style.display = "block";
         
-        // 🚀 AUTOMATIZACIÓN BRUTAL: Mandamos los puntos directo a la URL de la web raíz
-        setTimeout(() => {{
-            window.top.location.href = '/?game_score=' + score;
-        }}, 800);
+        // Al hacer clic, usamos el 'document.referrer' para abrir la web principal de forma limpia e inmune a bloqueos
+        saveScoreAction.onclick = function(e) {{
+            e.stopPropagation();
+            let parentUrl = document.referrer.split('?')[0]; 
+            window.open(parentUrl + '?game_score=' + score, '_blank');
+        }};
     }}
 
     function resetGame() {{ startGame(); }}
@@ -613,11 +564,10 @@ components.html(html_dino, height=280)
 
 
 # ==============================================================================
-# --- 🛠️ NUEVA LÓGICA: DETECCIÓN AUTOMÁTICA Y GUARDADO TOTAL ---
+# --- 🛠️ RECEPCIÓN DE MARCADORES AUTOMÁTICOS ---
 # ==============================================================================
 st.markdown("### 💾 Guardar Récord del Dino")
 
-# Capturamos la puntuación de la URL de forma totalmente automática
 puntos_detectados = None
 if "game_score" in st.query_params:
     try:
@@ -625,37 +575,31 @@ if "game_score" in st.query_params:
     except ValueError:
         puntos_detectados = None
 
-# Si la web detecta puntos, abre el panel de guardado al instante
 if puntos_detectados is not None:
-    st.info(f"🎯 **¡Partida terminada detectada!** Tu puntuación ha sido de: **{puntos_detectados} puntos**")
+    st.info(f"🎯 **¡Puntuación cargada con éxito!** Vas a registrar: **{puntos_detectados} puntos**")
     
     if jugadores_dino:
-        with st.form("guardar_record_dino_automatico", clear_on_submit=True):
-            # El usuario ya NO escribe puntos, solo elige su nombre
-            jugador_seleccionado = st.selectbox("Selecciona tu nombre para registrar la marca:", jugadores_dino, key="dino_user_auto")
-            submit_record = st.form_submit_button("🥇 Inmortalizar mi Puntuación")
+        with st.form("guardar_record_dino_auto", clear_on_submit=True):
+            jugador_seleccionado = st.selectbox("Selecciona tu nombre para inmortalizar la marca:", jugadores_dino, key="dino_user_final")
+            submit_record = st.form_submit_button("🥇 Inmortalizar Récord y Hora")
             
             if submit_record and jugador_seleccionado:
-                # Captura automática de la hora exacta
                 hora_actual = datetime.now().strftime("%H:%M:%S")
-                
-                # Formato final con puntos y hora exacta
                 nombre_registro = f"{jugador_seleccionado} (Dino: {puntos_detectados} pts a las {hora_actual})"
                 
                 guardar_ganador(nombre_registro)
-                st.success(f"¡Récord de {jugador_seleccionado} ({puntos_detectados} pts) guardado a las {hora_actual}!")
+                st.success(f"¡Récord guardado para {jugador_seleccionado}!")
                 
-                # Limpiamos el marcador de la URL para que la web quede lista para otra partida
                 del st.query_params["game_score"]
                 st.rerun()
                 
-        if st.button("❌ Descartar puntos y limpiar"):
+        if st.button("❌ Descartar y limpiar"):
             del st.query_params["game_score"]
             st.rerun()
     else:
-        st.warning("⚠️ Todos los jugadores ya han guardado su récord en el Dino.")
-        if st.button("🔄 Reiniciar lista"):
+        st.warning("⚠️ Todos los jugadores ya tienen un récord guardado.")
+        if st.button("🔄 Limpiar URL"):
             del st.query_params["game_score"]
             st.rerun()
 else:
-    st.caption("🏃‍♂️ Juega una partida. En cuanto pierdas, aparecerá aquí tu puntuación lista para guardar con un solo clic.")
+    st.caption("🏃‍♂️ Juega una partida. Al perder, pulsa el botón verde dentro del juego y este panel se activará solo con tus puntos.")

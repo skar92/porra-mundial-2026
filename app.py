@@ -2,10 +2,8 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-import random
 import os
 import csv
-import json
 
 # Configuración de la interfaz de Streamlit
 st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
@@ -78,25 +76,68 @@ banderas = {
     'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦'
 }
 
-# --- CUOTAS ACTUALIZADAS (Extraídas fielmente de los paneles de las imágenes) ---
-cuotas_ganador = {'Francia': 4.75, 'España': 6.00, 'Inglaterra': 6.50, 'Argentina': 9.00, 'Portugal': 9.00, 'Brasil': 10.00, 'Alemania': 13.00, 'Países Bajos': 21.00, 'Noruega': 29.00, 'EE. UU.': 34.00, 'Marruecos': 34.00, 'Bélgica': 41.00, 'Colombia': 41.00, 'México': 41.00, 'Suiza': 41.00, 'Japón': 51.00, 'Uruguay': 67.00, 'Canadá': 81.00, 'Croacia': 101.00, 'Ecuador': 101.00, 'Austria': 101.00, 'Costa de Marfil': 101.00, 'Senegal': 101.00, 'Turquía': 126.00, 'Escocia': 151.00, 'Bosnia y Herzegovina': 401.00}
-cuotas_final = {'Francia': 3.25, 'España': 3.75, 'Inglaterra': 3.75, 'Argentina': 5.00, 'Portugal': 5.00, 'Brasil': 5.50, 'Alemania': 7.00, 'Países Bajos': 9.00, 'Noruega': 11.00, 'Colombia': 15.00, 'México': 15.00, 'Bélgica': 17.00, 'EE. UU.': 17.00, 'Marruecos': 17.00, 'Suiza': 23.00, 'Japón': 23.00, 'Uruguay': 26.00, 'Austria': 34.00, 'Croacia': 34.00, 'Canadá': 34.00, 'Ecuador': 41.00, 'Senegal': 51.00, 'Turquía': 51.00, 'Escocia': 81.00, 'Costa de Marfil': 81.00, 'Bosnia y Herzegovina': 201.00}
-cuotas_semis = {'Francia': 2.25, 'España': 2.60, 'Inglaterra': 2.60, 'Argentina': 3.00, 'Portugal': 3.40, 'Brasil': 3.50, 'Alemania': 3.75, 'Países Bajos': 5.00, 'Noruega': 6.00, 'Bélgica': 6.50, 'Colombia': 6.50, 'EE. UU.': 7.00, 'México': 7.00, 'Marruecos': 7.50, 'Suiza': 10.00, 'Japón': 10.00, 'Uruguay': 12.00, 'Canadá': 12.00, 'Austria': 15.00, 'Croacia': 15.00, 'Senegal': 15.00, 'Costa de Marfil': 17.00, 'Ecuador': 19.00, 'Turquía': 21.00, 'Escocia': 23.00, 'Bosnia y Herzegovina': 51.00}
-cuotas_cuartos = {'Francia': 1.53, 'Inglaterra': 1.66, 'España': 1.66, 'Argentina': 1.75, 'Portugal': 1.90, 'Brasil': 2.15, 'Alemania': 2.30, 'Países Bajos': 2.75, 'Noruega': 2.75, 'EE. UU.': 3.00, 'Bélgica': 3.00, 'México': 3.25, 'Colombia': 3.50, 'Suiza': 3.50, 'Marruecos': 3.75, 'Canadá': 4.50, 'Japón': 4.50, 'Uruguay': 5.00, 'Austria': 6.00, 'Croacia': 6.50, 'Costa de Marfil': 7.00, 'Ecuador': 7.00, 'Senegal': 8.00, 'Escocia': 9.00, 'Turquía': 9.00, 'Bosnia y Herzegovina': 17.00}
-cuotas_octavos = {'Francia': 1.22, 'Inglaterra': 1.25, 'España': 1.30, 'Argentina': 1.40, 'Alemania': 1.41, 'Portugal': 1.45, 'Brasil': 1.50, 'Suiza': 1.65, 'México': 1.70, 'Noruega': 1.73, 'Bélgica': 1.73, 'EE. UU.': 1.80, 'Colombia': 1.91, 'Países Bajos': 1.91, 'Marruecos': 2.02, 'Canadá': 2.25, 'Japón': 2.50, 'Costa de Marfil': 2.63, 'Croacia': 2.77, 'Uruguay': 2.88, 'Austria': 3.00, 'Ecuador': 3.03, 'Escocia': 3.50, 'Turquía': 3.78, 'Senegal': 3.78, 'Bosnia y Herzegovina': 5.00}
+# --- CUOTAS ACTUALIZADAS HOY (Fielmente extraídas de los paneles de tus imágenes) ---
+cuotas_ganador = {
+    'Francia': 4.75, 'España': 6.00, 'Inglaterra': 6.00, 'Argentina': 9.00, 'Portugal': 9.00, 
+    'Brasil': 10.00, 'Alemania': 13.00, 'Países Bajos': 21.00, 'Noruega': 29.00, 'EE. UU.': 29.00, 
+    'Marruecos': 29.00, 'Bélgica': 41.00, 'Colombia': 41.00, 'México': 41.00, 'Uruguay': 67.00, 
+    'Suiza': 67.00, 'Canadá': 81.00, 'Suecia': 81.00, 'Croacia': 101.00, 'Ecuador': 101.00, 
+    'Austria': 101.00, 'Costa de Marfil': 101.00, 'Senegal': 101.00, 'Escocia': 201.00, 
+    'Bosnia y Herzegovina': 401.00
+}
+
+cuotas_final = {
+    'Francia': 3.00, 'España': 3.75, 'Inglaterra': 3.75, 'Argentina': 5.00, 'Portugal': 5.00, 
+    'Brasil': 5.50, 'Alemania': 7.00, 'Países Bajos': 9.00, 'Noruega': 11.00, 'EE. UU.': 13.00, 
+    'Bélgica': 15.00, 'Colombia': 15.00, 'México': 15.00, 'Marruecos': 15.00, 'Japón': 23.00, 
+    'Uruguay': 26.00, 'Suiza': 26.00, 'Austria': 34.00, 'Croacia': 34.00, 'Canadá': 34.00, 
+    'Suecia': 34.00, 'Ecuador': 41.00, 'Senegal': 51.00, 'Costa de Marfil': 67.00, 
+    'Escocia': 101.00, 'Bosnia y Herzegovina': 201.00
+}
+
+cuotas_semis = {
+    'Francia': 2.25, 'España': 2.60, 'Inglaterra': 2.60, 'Argentina': 3.00, 'Portugal': 3.25, 
+    'Brasil': 3.50, 'Alemania': 3.75, 'Países Bajos': 5.00, 'Noruega': 5.50, 'Bélgica': 6.00, 
+    'EE. UU.': 6.00, 'Colombia': 6.50, 'Marruecos': 6.50, 'México': 7.00, 'Suiza': 10.00, 
+    'Japón': 10.00, 'Canadá': 10.00, 'Uruguay': 11.00, 'Croacia': 13.00, 'Suecia': 15.00, 
+    'Austria': 17.00, 'Senegal': 17.00, 'Ecuador': 21.00, 'Costa de Marfil': 21.00, 
+    'Escocia': 29.00, 'Bosnia y Herzegovina': 51.00
+}
+
+cuotas_cuartos = {
+    'Francia': 1.53, 'Inglaterra': 1.66, 'España': 1.70, 'Argentina': 1.75, 'Portugal': 1.90, 
+    'Brasil': 2.10, 'Alemania': 2.30, 'EE. UU.': 2.50, 'Países Bajos': 2.75, 'Noruega': 2.75, 
+    'Bélgica': 3.00, 'México': 3.25, 'Marruecos': 3.25, 'Colombia': 3.50, 'Suiza': 3.50, 
+    'Canadá': 4.50, 'Japón': 4.50, 'Uruguay': 5.00, 'Suecia': 5.50, 'Austria': 6.50, 
+    'Croacia': 6.50, 'Costa de Marfil': 7.00, 'Ecuador': 7.00, 'Senegal': 8.00, 
+    'Escocia': 11.00, 'Turquía': 9.00, 'Bosnia y Herzegovina': 15.00
+}
+
+cuotas_octavos = {
+    'Francia': 1.20, 'Inglaterra': 1.22, 'España': 1.33, 'Argentina': 1.37, 'Alemania': 1.41, 
+    'Portugal': 1.45, 'Brasil': 1.45, 'EE. UU.': 1.62, 'Suiza': 1.65, 'México': 1.67, 
+    'Noruega': 1.73, 'Bélgica': 1.73, 'Colombia': 1.80, 'Canadá': 1.91, 'Países Bajos': 1.91, 
+    'Marruecos': 1.91, 'Japón': 2.50, 'Croacia': 2.75, 'Costa de Marfil': 2.77, 'Uruguay': 2.80, 
+    'Ecuador': 3.00, 'Austria': 3.00, 'Suecia': 3.10, 'Escocia': 4.00, 'Senegal': 4.00, 
+    'Turquía': 3.78, 'Bosnia y Herzegovina': 5.25
+}
 
 todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
 probabilidades = {}
 for eq in todos_equipos:
     n = traduccion_interna.get(eq, eq)
+    
+    # Condición estricta: si no aparece en las cuotas de la fase, la probabilidad es exactamente 0.0
     probabilidades[eq] = {
-        'ganador': 1 / float(cuotas_ganador.get(n, 1000.0)), 'final': 1 / float(cuotas_final.get(n, 1000.0)),
-        'semis': 1 / float(cuotas_semis.get(n, 1000.0)), 'cuartos': 1 / float(cuotas_cuartos.get(n, 1000.0)),
-        'octavos': 1 / float(cuotas_octavos.get(n, 1000.0))
+        'ganador': 1 / float(cuotas_ganador[n]) if n in cuotas_ganador else 0.0,
+        'final': 1 / float(cuotas_final[n]) if n in cuotas_final else 0.0,
+        'semis': 1 / float(cuotas_semis[n]) if n in cuotas_semis else 0.0,
+        'cuartos': 1 / float(cuotas_cuartos[n]) if n in cuotas_cuartos else 0.0,
+        'octavos': 1 / float(cuotas_octavos[n]) if n in cuotas_octavos else 0.0
     }
 
 filas_hoy = []
-fecha_hoy = "2026-06-19" # Actualizado a la fecha de hoy
+fecha_hoy = "2026-06-20"  # Nueva fecha tras la actualización
 for jugador, equipos in porra.items():
     puntos_selecciones = sum([(10 * probabilidades[e]['octavos'] + 12 * probabilidades[e]['cuartos'] + 15 * probabilidades[e]['semis'] + 18 * probabilidades[e]['final'] + 20 * probabilidades[e]['ganador']) for e in equipos])
     puntos_totales = puntos_selecciones + puntos_futbolistas_actuales.get(jugador, 0)
@@ -106,17 +147,30 @@ df_hoy = pd.DataFrame(filas_hoy)
 total_puntos = df_hoy["Puntos Esperados"].sum()
 df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos if total_puntos > 0 else 1)) * 100, 2)
 
-# --- HISTORIAL COMPLETO CON LOS DATOS DE AYER (18/06 de image_4b50bc.png) ---
+# --- HISTORIAL COMPLETO INCLUYENDO LOS DATOS EXACTOS DE AYER (19/06) ---
 datos_15_junio = [{"Fecha": "2026-06-15", "Jugador": "Mírete", "Probabilidad (%)": 14.43}, {"Fecha": "2026-06-15", "Jugador": "Sierra", "Probabilidad (%)": 13.80}, {"Fecha": "2026-06-15", "Jugador": "Telenti", "Probabilidad (%)": 13.59}, {"Fecha": "2026-06-15", "Jugador": "Joaquín", "Probabilidad (%)": 13.49}, {"Fecha": "2026-06-15", "Jugador": "Ejkar", "Probabilidad (%)": 13.48}, {"Fecha": "2026-06-15", "Jugador": "Miguel Ángel", "Probabilidad (%)": 12.67}, {"Fecha": "2026-06-15", "Jugador": "Vecina", "Probabilidad (%)": 10.07}, {"Fecha": "2026-06-15", "Jugador": "Juan", "Probabilidad (%)": 8.48}]
 datos_17_junio = [{"Fecha": "2026-06-17", "Jugador": "Telenti", "Probabilidad (%)": 14.41}, {"Fecha": "2026-06-17", "Jugador": "Joaquín", "Probabilidad (%)": 14.30}, {"Fecha": "2026-06-17", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.62}, {"Fecha": "2026-06-17", "Jugador": "Mírete", "Probabilidad (%)": 13.47}, {"Fecha": "2026-06-17", "Jugador": "Ejkar", "Probabilidad (%)": 12.90}, {"Fecha": "2026-06-17", "Jugador": "Sierra", "Probabilidad (%)": 12.88}, {"Fecha": "2026-06-17", "Jugador": "Vecina", "Probabilidad (%)": 9.47}, {"Fecha": "2026-06-17", "Jugador": "Juan", "Probabilidad (%)": 8.95}]
 datos_18_junio = [{"Fecha": "2026-06-18", "Jugador": "Telenti", "Probabilidad (%)": 14.33}, {"Fecha": "2026-06-18", "Jugador": "Joaquín", "Probabilidad (%)": 14.04}, {"Fecha": "2026-06-18", "Jugador": "Ejkar", "Probabilidad (%)": 13.73}, {"Fecha": "2026-06-18", "Jugador": "Mírete", "Probabilidad (%)": 13.62}, {"Fecha": "2026-06-18", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.54}, {"Fecha": "2026-06-18", "Jugador": "Sierra", "Probabilidad (%)": 12.81}, {"Fecha": "2026-06-18", "Jugador": "Vecina", "Probabilidad (%)": 9.29}, {"Fecha": "2026-06-18", "Jugador": "Juan", "Probabilidad (%)": 8.64}]
 
+# Datos extraídos fielmente de tu última imagen (19 de junio)
+datos_19_junio = [
+    {"Fecha": "2026-06-19", "Jugador": "Telenti", "Probabilidad (%)": 14.18},
+    {"Fecha": "2026-06-19", "Jugador": "Joaquín", "Probabilidad (%)": 13.77},
+    {"Fecha": "2026-06-19", "Jugador": "Ejkar", "Probabilidad (%)": 13.58},
+    {"Fecha": "2026-06-19", "Jugador": "Mírete", "Probabilidad (%)": 13.44},
+    {"Fecha": "2026-06-19", "Jugador": "Sierra", "Probabilidad (%)": 13.42},
+    {"Fecha": "2026-06-19", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.40},
+    {"Fecha": "2026-06-19", "Jugador": "Vecina", "Probabilidad (%)": 9.47},
+    {"Fecha": "2026-06-19", "Jugador": "Juan", "Probabilidad (%)": 8.74}
+]
+
 df_15 = pd.DataFrame(datos_15_junio)
 df_17 = pd.DataFrame(datos_17_junio)
 df_18 = pd.DataFrame(datos_18_junio)
-df_19 = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]]
+df_19 = pd.DataFrame(datos_19_junio)
+df_20 = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]]
 
-df_hist = pd.concat([df_15, df_17, df_18, df_19], ignore_index=True)
+df_hist = pd.concat([df_15, df_17, df_18, df_19, df_20], ignore_index=True)
 
 # INTERFAZ DE GRÁFICOS
 col1, col2 = st.columns([1.2, 0.8])

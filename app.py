@@ -38,7 +38,7 @@ porra_futbolistas = {
     'Sierra': {'Kane': 2, 'Julián Álvarez': 0},
     'Joaquín': {'Messi': 3, 'Olise': 0},
     'Ejkar': {'Lautaro': 0, 'Raphinha': 0},
-    'Vecina': {'Havertz': 2, 'Lamine Yamal': 0},
+    'Vecina': {'Havertz': 2, 'Lamine Yamal': 1},
     'Telenti': {'Endrick': 0, 'Ramos': 0},
     'Miguel Ángel': {'Haaland': 2, 'Embolo': 1},
     'Mírete': {'Oyarzabal': 2, 'El Bicho': 0}, 

@@ -36,13 +36,13 @@ porra = {
 
 porra_futbolistas = {
     'Sierra': {'Kane': 2, 'Julián Álvarez': 0},
-    'Joaquín': {'Messi': 3, 'Olise': 0},
+    'Joaquín': {'Messi': 5, 'Olise': 0},
     'Ejkar': {'Lautaro': 0, 'Raphinha': 0},
-    'Vecina': {'Havertz': 2, 'Lamine Yamal': 0},
+    'Vecina': {'Havertz': 2, 'Lamine Yamal': 1},
     'Telenti': {'Endrick': 0, 'Ramos': 0},
-    'Miguel Ángel': {'Haaland': 2, 'Embolo': 1},
-    'Mírete': {'Oyarzabal': 0, 'El Bicho': 0}, 
-    'Juan': {'Mbappé': 2, 'Vinicius': 1}
+    'Miguel Ángel': {'Haaland': 4, 'Embolo': 1},
+    'Mírete': {'Oyarzabal': 2, 'El Bicho': 0}, 
+    'Juan': {'Mbappé': 4, 'Vinicius': 2}
 }
 
 puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos, dict) else 0 

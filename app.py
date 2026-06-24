@@ -8,7 +8,7 @@ import csv
 # Configuración de la interfaz de Streamlit
 st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
 st.title("🏆 Seguimiento y Evolución de la Porra (Modelo No Acumulativo)")
-st.write(f"Última actualización de cuotas: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+st.write(f"Última actualización de cuotas reales: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
 FILE_GANADORES = "ganadores_sopa.csv"
 
@@ -41,7 +41,7 @@ porra_futbolistas = {
     'Vecina': {'Havertz': 2, 'Lamine Yamal': 1},
     'Telenti': {'Endrick': 0, 'Ramos': 0},
     'Miguel Ángel': {'Haaland': 4, 'Embolo': 1},
-    'Mírete': {'Oyarzabal': 2, 'El Bicho': 0}, 
+    'Mírete': {'Oyarzabal': 2, 'El Bicho': 2}, 
     'Juan': {'Mbappé': 4, 'Vinicius': 2}
 }
 
@@ -68,71 +68,81 @@ banderas = {
     'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦'
 }
 
-# --- CUOTAS DE HOY EXTRAÍDAS DE TUS NUEVAS IMÁGENES ---
+# --- CUOTAS EXTRAÍDAS FIELMENTE DE LAS CAPTURAS DE PANTALLA (24/06) ---
 cuotas_octavos = {
-    'Francia': 1.12, 'Argentina': 1.20, 'Inglaterra': 1.20, 'España': 1.20, 'Alemania': 1.25,
-    'EE. UU.': 1.40, 'Brasil': 1.40, 'Portugal': 1.40, 'México': 1.50, 'Noruega': 1.50,
-    'Países Bajos': 1.57, 'Suiza': 1.60, 'Bélgica': 1.70, 'Colombia': 1.70, 'Canadá': 1.72,
-    'Marruecos': 1.83, 'Japón': 2.00, 'Egipto': 2.35, 'Costa de Marfil': 2.50, 'Croacia': 2.75,
-    'Corea del Sur': 2.75, 'Austria': 3.00, 'Senegal': 3.00, 'Australia': 3.00, 'Paraguay': 3.50,
-    'Argelia': 4.00, 'Bosnia y Herzegovina': 4.00, 'Ghana': 4.50, 'Escocia': 4.50, 'Uruguay': 4.50,
-    'Ecuador': 7.00
+    'Francia': 1.12, 'Argentina': 1.20, 'Inglaterra': 1.20, 'España': 1.20, 'Alemania': 1.25, 
+    'Portugal': 1.36, 'EE. UU.': 1.40, 'Brasil': 1.40, 'México': 1.50, 'Noruega': 1.50, 
+    'Países Bajos': 1.57, 'Suiza': 1.57, 'Colombia': 1.60, 'Bélgica': 1.70, 'Canadá': 1.72, 
+    'Marruecos': 1.83, 'Japón': 2.00, 'Croacia': 2.30, 'Egipto': 2.35, 'Costa de Marfil': 2.60, 
+    'Corea del Sur': 2.75, 'Australia': 3.00, 'Austria': 3.00, 'Senegal': 3.00, 'Ghana': 3.25, 
+    'Paraguay': 3.50, 'Suecia': 3.75, 'Argelia': 4.00, 'Bosnia y Herzegovina': 4.00, 'Irán': 4.50, 
+    'Escocia': 4.50, 'Uruguay': 4.50, 'Cabo Verde': 7.00, 'RD Congo': 7.00, 'Ecuador': 7.00, 
+    'Chequia': 7.50, 'Arabia Saudita': 10.00, 'Nueva Zelanda': 17.00, 'Sudáfrica': 17.00, 
+    'Irak': 26.00, 'Uzbekistán': 26.00, 'Catar': 29.00, 'Curazao': 34.00, 'Turquía': float('inf')
 }
 
 cuotas_cuartos = {
-    'Argentina': 1.44, 'Francia': 1.53, 'Inglaterra': 1.57, 'España': 1.57, 'EE. UU.': 2.10,
-    'Brasil': 2.25, 'Países Bajos': 2.25, 'Portugal': 2.25, 'Alemania': 2.37, 'Noruega': 2.75,
-    'Colombia': 3.25, 'Marruecos': 3.25, 'México': 3.50, 'Suiza': 3.50, 'Bélgica': 3.75,
-    'Japón': 3.75, 'Canadá': 4.50, 'Austria': 7.00, 'Croacia': 7.00, 'Costa de Marfil': 7.50,
-    'Egipto': 7.50, 'Senegal': 7.50, 'Argelia': 8.00, 'Australia': 8.00, 'Corea del Sur': 8.00,
-    'Suecia': 8.00, 'Uruguay': 9.00, 'Escocia': 11.00, 'Ghana': 13.00, 'Bosnia y Herzegovina': 15.00,
-    'Ecuador': 15.00, 'Paraguay': 15.00
+    'Argentina': 1.44, 'Francia': 1.53, 'Inglaterra': 1.57, 'España': 1.57, 'Portugal': 1.95, 
+    'EE. UU.': 2.10, 'Brasil': 2.25, 'Países Bajos': 2.25, 'Alemania': 2.37, 'Noruega': 2.75, 
+    'Colombia': 3.00, 'Marruecos': 3.25, 'México': 3.50, 'Suiza': 3.50, 'Bélgica': 3.75, 
+    'Japón': 3.75, 'Canadá': 4.50, 'Croacia': 6.00, 'Austria': 7.00, 'Costa de Marfil': 7.50, 
+    'Egipto': 7.50, 'Senegal': 7.50, 'Australia': 8.00, 'Corea del Sur': 8.00, 'Suecia': 8.00, 
+    'Argelia': 9.00, 'Uruguay': 9.00, 'Ghana': 11.00, 'Escocia': 11.00, 'Bosnia y Herzegovina': 15.00, 
+    'Ecuador': 15.00, 'Paraguay': 15.00, 'Irán': 17.00, 'Chequia': 21.00, 'Cabo Verde': 29.00, 
+    'RD Congo': 29.00, 'Arabia Saudita': 41.00, 'Nueva Zelanda': 51.00, 'Irak': 67.00, 
+    'Sudáfrica': 67.00, 'Uzbekistán': 81.00, 'Curazao': 101.00, 'Catar': 201.00, 'Turquía': float('inf')
 }
 
 cuotas_semis = {
-    'España': 2.25, 'Francia': 2.25, 'Argentina': 2.25, 'Inglaterra': 2.40, 'Portugal': 3.50,
-    'Alemania': 3.75, 'Brasil': 4.00, 'Países Bajos': 4.33, 'EE. UU.': 5.00, 'Noruega': 6.00,
-    'Colombia': 7.00, 'Marruecos': 7.00, 'Bélgica': 7.50, 'México': 8.00, 'Japón': 8.00,
-    'Suiza': 10.00, 'Senegal': 15.00, 'Austria': 17.00, 'Croacia': 17.00, 'Canadá': 17.00,
-    'Egipto': 21.00, 'Costa de Marfil': 21.00, 'Uruguay': 26.00, 'Australia': 26.00, 'Suecia': 26.00,
-    'Argelia': 29.00, 'Corea del Sur': 34.00, 'Escocia': 41.00, 'Ecuador': 41.00, 'Paraguay': 41.00,
-    'Ghana': 41.00, 'Bosnia y Herzegovina': 51.00
+    'Francia': 2.20, 'Argentina': 2.20, 'España': 2.25, 'Inglaterra': 2.40, 'Portugal': 3.25, 
+    'Alemania': 3.75, 'Brasil': 4.00, 'Países Bajos': 4.33, 'EE. UU.': 5.00, 'Noruega': 6.00, 
+    'Colombia': 7.00, 'Marruecos': 7.00, 'Bélgica': 7.50, 'México': 8.00, 'Japón': 8.00, 
+    'Suiza': 10.00, 'Croacia': 13.00, 'Austria': 17.00, 'Canadá': 17.00, 'Senegal': 17.00, 
+    'Egipto': 21.00, 'Costa de Marfil': 21.00, 'Uruguay': 26.00, 'Australia': 26.00, 'Suecia': 26.00, 
+    'Argelia': 29.00, 'Corea del Sur': 34.00, 'Ecuador': 41.00, 'Paraguay': 41.00, 'Escocia': 41.00, 
+    'Ghana': 41.00, 'Bosnia y Herzegovina': 51.00, 'Chequia': 67.00, 'Irán': 81.00, 'Cabo Verde': 101.00, 
+    'RD Congo': 101.00, 'Arabia Saudita': 151.00, 'Nueva Zelanda': 201.00, 'Uzbekistán': 251.00, 
+    'Irak': 251.00, 'Sudáfrica': 301.00, 'Catar': 501.00, 'Curazao': 1001.00, 'Turquía': float('inf')
 }
 
 cuotas_final = {
-    'Francia': 3.00, 'España': 3.75, 'Inglaterra': 3.75, 'Argentina': 5.00, 'Portugal': 5.00,
-    'Brasil': 5.50, 'Alemania': 7.00, 'Países Bajos': 9.00, 'Noruega': 11.00, 'EE. UU.': 13.00,
-    'Bélgica': 15.00, 'Colombia': 15.00, 'México': 15.00, 'Marruecos': 15.00, 'Japón': 23.00,
-    'Uruguay': 26.00, 'Suiza': 26.00, 'Austria': 34.00, 'Croacia': 34.00, 'Canadá': 34.00,
-    'Suecia': 34.00, 'Ecuador': 41.00, 'Australia': 51.00, 'Senegal': 51.00, 'Costa de Marfil': 67.00,
-    'Egipto': 81.00, 'Paraguay': 101.00, 'Escocia': 101.00, 'Corea del Sur': 101.00, 'Argelia': 101.00,
-    'Ghana': 101.00, 'Bosnia y Herzegovina': 201.00
+    'Francia': 3.00, 'España': 3.75, 'Inglaterra': 4.00, 'Argentina': 4.00, 'Portugal': 5.50, 
+    'Brasil': 6.50, 'Alemania': 6.50, 'Países Bajos': 8.00, 'Noruega': 11.00, 'EE. UU.': 13.00, 
+    'Marruecos': 13.00, 'Colombia': 15.00, 'México': 15.00, 'Japón': 17.00, 'Bélgica': 21.00, 
+    'Suiza': 26.00, 'Croacia': 34.00, 'Canadá': 34.00, 'Austria': 41.00, 'Senegal': 51.00, 
+    'Costa de Marfil': 51.00, 'Uruguay': 67.00, 'Australia': 67.00, 'Egipto': 67.00, 'Suecia': 67.00, 
+    'Ecuador': 81.00, 'Paraguay': 101.00, 'Escocia': 101.00, 'Corea del Sur': 101.00, 'Ghana': 101.00, 
+    'Argelia': 126.00, 'Bosnia y Herzegovina': 201.00, 'Chequia': 201.00, 'Irán': 251.00, 
+    'Cabo Verde': 301.00, 'Nueva Zelanda': 301.00, 'RD Congo': 301.00, 'Arabia Saudita': 401.00, 
+    'Uzbekistán': 501.00, 'Irak': 751.00, 'Catar': 1001.00, 'Sudáfrica': 1001.00, 'Curazao': 1001.00, 'Turquía': float('inf')
 }
 
 cuotas_ganador = {
-    'Francia': 4.50, 'España': 6.50, 'Inglaterra': 6.50, 'Argentina': 7.50, 'Brasil': 11.00,
-    'Portugal': 11.00, 'Alemania': 13.00, 'Países Bajos': 15.00, 'Noruega': 29.00, 'EE. UU.': 29.00,
-    'Marruecos': 29.00, 'Japón': 34.00, 'México': 41.00, 'Bélgica': 51.00, 'Colombia': 51.00,
-    'Suiza': 67.00, 'Croacia': 101.00, 'Uruguay': 101.00, 'Canadá': 101.00, 'Suecia': 101.00,
-    'Costa de Marfil': 101.00, 'Austria': 126.00, 'Australia': 126.00, 'Senegal': 126.00,
-    'Paraguay': 201.00, 'Escocia': 201.00, 'Egipto': 201.00, 'Ecuador': 251.00, 'Corea del Sur': 251.00,
-    'Bosnia y Herzegovina': 401.00, 'Argelia': 501.00
+    'Francia': 4.50, 'España': 6.50, 'Argentina': 7.00, 'Inglaterra': 7.00, 'Portugal': 10.00, 
+    'Brasil': 11.00, 'Alemania': 13.00, 'Países Bajos': 15.00, 'Noruega': 29.00, 'EE. UU.': 29.00, 
+    'Marruecos': 29.00, 'Japón': 34.00, 'Colombia': 41.00, 'México': 41.00, 'Bélgica': 51.00, 
+    'Suiza': 67.00, 'Croacia': 101.00, 'Uruguay': 101.00, 'Canadá': 101.00, 'Costa de Marfil': 101.00, 
+    'Suecia': 101.00, 'Austria': 126.00, 'Australia': 126.00, 'Senegal': 126.00, 'Paraguay': 201.00, 
+    'Escocia': 201.00, 'Egipto': 201.00, 'Ecuador': 251.00, 'Corea del Sur': 251.00, 'Chequia': 301.00, 
+    'Ghana': 301.00, 'Bosnia y Herzegovina': 401.00, 'RD Congo': 401.00, 'Argelia': 501.00, 
+    'Irán': 501.00, 'Nueva Zelanda': 501.00, 'Cabo Verde': 501.00, 'Arabia Saudita': 751.00, 
+    'Sudáfrica': 1001.00, 'Uzbekistán': 1001.00, 'Catar': 1001.00, 'Irak': 1001.00, 'Curazao': 2001.00, 'Turquía': float('inf')
 }
 
-# --- CÓMPUTO MATEMÁTICO NO ACUMULATIVO (VALOR ESPERADO EXACTO) ---
+# --- CÓMPUTO MATEMÁTICO NO ACUMULATIVO ---
 todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
 probabilidades_fase_maxima = {}
 
 for eq in todos_equipos:
     n = traduccion_interna.get(eq, eq)
     
-    p_oct = 1 / float(cuotas_octavos[n]) if n in cuotas_octavos else 0.0
-    p_cua = 1 / float(cuotas_cuartos[n]) if n in cuotas_cuartos else 0.0
-    p_sem = 1 / float(cuotas_semis[n]) if n in cuotas_semis else 0.0
-    p_fin = 1 / float(cuotas_final[n]) if n in cuotas_final else 0.0
-    p_gan = 1 / float(cuotas_ganador[n]) if n in cuotas_ganador else 0.0
+    p_oct = 1 / float(cuotas_octavos[n]) if cuotas_octavos[n] != float('inf') else 0.0
+    p_cua = 1 / float(cuotas_cuartos[n]) if cuotas_cuartos[n] != float('inf') else 0.0
+    p_sem = 1 / float(cuotas_semis[n]) if cuotas_semis[n] != float('inf') else 0.0
+    p_fin = 1 / float(cuotas_final[n]) if cuotas_final[n] != float('inf') else 0.0
+    p_gan = 1 / float(cuotas_ganador[n]) if cuotas_ganador[n] != float('inf') else 0.0
 
-    # Lógica de exclusión mutua por fase
+    # Lógica de exclusión mutua para fases exactas
     p_exacta_oct = max(0.0, p_oct - p_cua)
     p_exacta_cua = max(0.0, p_cua - p_sem)
     p_exacta_sem = max(0.0, p_sem - p_fin)
@@ -159,7 +169,7 @@ df_hoy = pd.DataFrame(filas_hoy)
 total_puntos_global = df_hoy["Puntos Esperados"].sum()
 df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos_global if total_puntos_global > 0 else 1)) * 100, 2)
 
-# --- CONSTRUCCIÓN HISTÓRICA COMPLETA ---
+# --- RECONSTRUCCIÓN CRONOLÓGICA DEL HISTORIAL ---
 datos_22_junio = [
     {"Fecha": "22/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.34},
     {"Fecha": "22/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.99},
@@ -186,10 +196,10 @@ df_22 = pd.DataFrame(datos_22_junio)
 df_23 = pd.DataFrame(datos_23_junio)
 df_24 = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]].copy()
 
-# Unión cronológica total
+# Unión de la línea temporal completa
 df_historial_completo = pd.concat([df_22, df_23, df_24], ignore_index=True)
 
-# --- PRESENTACIÓN EN INTERFAZ STREAMLIT ---
+# --- RENDERIZADO INTERFAZ STREAMLIT ---
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
@@ -215,6 +225,11 @@ fig_lineas = px.line(
 )
 fig_lineas.update_layout(xaxis_title="Fecha de Actualización", yaxis_title="Probabilidad de Victoria (%)")
 st.plotly_chart(fig_lineas, use_container_width=True)
+
+
+
+
+
 
 import streamlit as st
 import random

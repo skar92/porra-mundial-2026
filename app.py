@@ -42,7 +42,7 @@ porra_futbolistas = {
     'Telenti': {'Endrick': 0, 'Ramos': 0},
     'Miguel Ángel': {'Haaland': 4, 'Embolo': 1},
     'Mírete': {'Oyarzabal': 2, 'El Bicho': 2}, 
-    'Juan': {'Mbappé': 4, 'Vinicius': 2}
+    'Juan': {'Mbappé': 4, 'Vinicius': 4}
 }
 
 puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos, dict) else 0 

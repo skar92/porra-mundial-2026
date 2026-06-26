@@ -724,3 +724,299 @@ if puntos_detectados is not None:
             st.rerun()
 else:
     st.caption("🏃‍♂️ Juega una partida. Al perder, pulsa el botón verde dentro del juego y este panel se activará solo con tus puntos.")
+
+
+
+
+
+# ==============================================================================
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN ---
+# ==============================================================================
+st.markdown("---")
+st.subheader("🎣 Minijuego: La Pesca de Juan")
+st.write("Pesca **10 Juanes** en el menor tiempo posible. Evita las **tarjetas rojas**.")
+st.write("**Instrucciones:** Haz clic/toca a la **izquierda o derecha** de Juan y **mantén presionado** para cargar fuerza. Suelta para lanzar el anzuelo.")
+
+# Reutilizamos la lógica de imagen base64 del dino
+img_base64_pesca = img_base64 
+
+html_pesca = f"""
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+    body {{ margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; touch-action: none; background: #87CEEB; }}
+    #game-canvas {{ background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 40%, #1E90FF 40%, #00008B 100%); display: block; }}
+    #ui {{ position: absolute; top: 10px; left: 10px; color: white; text-shadow: 1px 1px 2px black; pointer-events: none; }}
+    #penalty-timer {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff4444; font-size: 40px; font-weight: bold; display: none; text-align: center; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; }}
+    #win-screen {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; text-align: center; display: none; box-shadow: 0 0 20px rgba(0,0,0,0.5); }}
+    .btn {{ background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }}
+</style>
+</head>
+<body>
+
+<div id="ui">
+    <div>Juanes: <span id="score">0</span> / 10</div>
+    <div>Tiempo: <span id="clock">0.0</span>s</div>
+</div>
+
+<div id="penalty-timer">🚫 EXPULSADO<br><span id="p-seconds">5</span>s</div>
+
+<div id="win-screen">
+    <h2>🏆 ¡PESCA COMPLETADA!</h2>
+    <p id="final-time-text"></p>
+    <button id="save-pesca-btn" class="btn">💾 Registrar Tiempo</button>
+</div>
+
+<canvas id="game-canvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const clockEl = document.getElementById('clock');
+    const winScreen = document.getElementById('win-screen');
+    const penaltyEl = document.getElementById('penalty-timer');
+    const pSecondsEl = document.getElementById('p-seconds');
+
+    let width, height;
+    function resize() {{
+        width = window.innerWidth;
+        height = 400;
+        canvas.width = width;
+        canvas.height = height;
+    }}
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Imagen del pescador
+    const juanImg = new Image();
+    let imageLoaded = false;
+    juanImg.src = "data:image/png;base64,{img_base64_pesca}";
+    juanImg.onload = () => imageLoaded = true;
+
+    // Estado del juego
+    let score = 0;
+    let startTime = Date.now();
+    let isGameOver = false;
+    let penaltyTime = 0;
+    let nPenalties = 0;
+    let charging = false;
+    let chargePower = 0;
+    let chargeDir = 1; // 1 derecha, -1 izquierda
+    
+    // Anzuelo
+    let hook = {{ x: 0, y: 0, active: false, tx: 0, ty: 0, state: 'idle', power: 0 }};
+
+    // Objetos
+    const TYPES = {{ JUAN: 'juan', BALL: 'ball', CARD: 'card' }};
+    let objects = [];
+
+    function spawnObject() {{
+        const prob = Math.random();
+        let type = TYPES.BALL;
+        if (prob < 0.2) type = TYPES.JUAN;
+        else if (prob < 0.4) type = TYPES.CARD;
+
+        return {{
+            x: Math.random() * width,
+            y: 200 + Math.random() * 150,
+            type: type,
+            vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 5 : 2),
+            ax: 0,
+            size: type === TYPES.JUAN ? 25 : 20,
+            lastFlip: Date.now()
+        }};
+    }}
+
+    for(let i=0; i<10; i++) objects.push(spawnObject());
+
+    function update() {{
+        if (isGameOver) return;
+
+        // Reloj
+        const now = Date.now();
+        if (penaltyTime > now) {{
+            penaltyEl.style.display = 'block';
+            pSecondsEl.innerText = Math.ceil((penaltyTime - now)/1000);
+            return;
+        }} else {{
+            penaltyEl.style.display = 'none';
+        }}
+        
+        clockEl.innerText = ((now - startTime) / 1000).toFixed(1);
+
+        // Carga de fuerza
+        if (charging) {{
+            chargePower = Math.min(chargePower + 2, 100);
+        }}
+
+        // Movimiento de objetos
+        objects.forEach(obj => {{
+            if (obj.type === TYPES.JUAN) {{
+                obj.ax = (Math.random() - 0.5) * 0.5;
+                if (Date.now() - obj.lastFlip > 1000) {{
+                    if (Math.random() > 0.8) obj.vx *= -1;
+                    obj.lastFlip = Date.now();
+                }}
+            }}
+            obj.vx += obj.ax;
+            // Limitar velocidad
+            let maxV = obj.type === TYPES.JUAN ? 4 : 1.5;
+            obj.vx = Math.max(Math.min(obj.vx, maxV), -maxV);
+            
+            obj.x += obj.vx;
+            if (obj.x < 0 || obj.x > width) obj.vx *= -1;
+        }});
+
+        // Anzuelo
+        if (hook.state === 'launching') {{
+            hook.y += 5;
+            if (hook.y > height - 20) hook.state = 'returning';
+            
+            // Colisión
+            objects.forEach((obj, i) => {{
+                let dx = hook.x - obj.x;
+                let dy = hook.y - obj.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < obj.size) {{
+                    catchObject(obj, i);
+                    hook.state = 'returning';
+                }}
+            }});
+        }} else if (hook.state === 'returning') {{
+            hook.y -= 7;
+            if (hook.y <= 150) hook.state = 'idle';
+        }}
+    }}
+
+    function catchObject(obj, index) {{
+        if (obj.type === TYPES.JUAN) {{
+            score++;
+            scoreEl.innerText = score;
+            if (score >= 10) win();
+        }} else if (obj.type === TYPES.CARD) {{
+            nPenalties++;
+            penaltyTime = Date.now() + (4 + nPenalties) * 1000;
+        }}
+        objects[index] = spawnObject();
+    }}
+
+    function win() {{
+        isGameOver = true;
+        const finalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+        winScreen.style.display = 'block';
+        document.getElementById('final-time-text').innerText = "Tiempo total: " + finalTime + " segundos";
+        document.getElementById('save-pesca-btn').onclick = () => {{
+            let parentUrl = document.referrer.split('?')[0]; 
+            window.open(parentUrl + '?pesca_time=' + finalTime, '_blank');
+        }};
+    }}
+
+    function draw() {{
+        ctx.clearRect(0, 0, width, height);
+
+        // Plataforma
+        ctx.fillStyle = '#8B4513';
+        ctx.fillRect(width/2 - 40, 140, 80, 10);
+
+        // Juan Pescador
+        if (imageLoaded) {{
+            ctx.drawImage(juanImg, width/2 - 30, 75, 60, 70);
+        }} else {{
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(width/2 - 15, 90, 30, 50);
+        }}
+
+        // Barra de fuerza
+        if (charging) {{
+            ctx.fillStyle = 'red';
+            ctx.fillRect(width/2 - 50, 60, chargePower, 10);
+            ctx.strokeStyle = 'white';
+            ctx.strokeRect(width/2 - 50, 60, 100, 10);
+        }}
+
+        // Hilo y Anzuelo
+        if (hook.state !== 'idle') {{
+            ctx.beginPath();
+            ctx.moveTo(width/2, 110);
+            ctx.lineTo(hook.x, hook.y);
+            ctx.strokeStyle = 'white';
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(hook.x, hook.y, 5, 0, Math.PI*2);
+            ctx.fillStyle = 'silver';
+            ctx.fill();
+        }}
+
+        // Dibujar objetos
+        objects.forEach(obj => {{
+            ctx.font = obj.size + "px serif";
+            let icon = '⚽';
+            if (obj.type === TYPES.JUAN) icon = '👤';
+            if (obj.type === TYPES.CARD) icon = '🟥';
+            ctx.fillText(icon, obj.x - obj.size/2, obj.y + obj.size/2);
+        }});
+
+        requestAnimationFrame(() => {{ update(); draw(); }});
+    }}
+
+    function inputStart(e) {{
+        if (isGameOver || penaltyTime > Date.now() || hook.state !== 'idle') return;
+        charging = true;
+        chargePower = 0;
+        let x = e.clientX || e.touches[0].clientX;
+        chargeDir = x < width/2 ? -1 : 1;
+    }}
+
+    function inputEnd() {{
+        if (!charging) return;
+        charging = false;
+        hook.state = 'launching';
+        hook.x = (width/2) + (chargePower * 2 * chargeDir);
+        hook.y = 150;
+    }}
+
+    window.addEventListener('mousedown', inputStart);
+    window.addEventListener('mouseup', inputEnd);
+    window.addEventListener('touchstart', inputStart);
+    window.addEventListener('touchend', inputEnd);
+    window.addEventListener('keydown', (e) => {{ if(e.code === 'Space') inputStart({{clientX: width/2 + 10}}); }});
+    window.addEventListener('keyup', (e) => {{ if(e.code === 'Space') inputEnd(); }});
+
+    draw();
+</script>
+</body>
+</html>
+"""
+
+components.html(html_pesca, height=450)
+
+# ==============================================================================
+# --- 🛠️ RECEPCIÓN DE MARCADORES PESCA ---
+# ==============================================================================
+st.markdown("### 💾 Guardar Récord de Pesca")
+
+puntos_pesca = st.query_params.get("pesca_time")
+
+if puntos_pesca:
+    st.success(f"🎯 **¡Pesca completada!** Tiempo: **{puntos_pesca} segundos**")
+    # Filtramos para que solo aparezcan los que no han registrado este tiempo específico 
+    # (O usa la misma lista jugadores_sopa si quieres que solo ganen una vez)
+    with st.form("guardar_record_pesca", clear_on_submit=True):
+        jugador_seleccionado = st.selectbox("Selecciona tu nombre:", JUGADORES_BASE, key="pesca_user_reg")
+        submit_pesca = st.form_submit_button("🥇 Registrar mi Tiempo")
+        
+        if submit_pesca and jugador_seleccionado:
+            nombre_registro = f"{jugador_seleccionado} (Pesca: {puntos_pesca}s a las {datetime.now().strftime('%H:%M')})"
+            guardar_ganador(nombre_registro)
+            st.success("¡Tiempo guardado!")
+            st.query_params.clear()
+            st.rerun()
+            
+    if st.button("❌ Limpiar"):
+        st.query_params.clear()
+        st.rerun()
+else:
+    st.caption("🎣 Completa la pesca para registrar tu tiempo.")

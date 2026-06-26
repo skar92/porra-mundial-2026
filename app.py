@@ -727,17 +727,15 @@ else:
 
 
 
-
-
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN ---
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN MISTERIO) ---
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 Minijuego: La Pesca de Juan")
-st.write("Pesca **10 Juanes** en el menor tiempo posible. Evita las **tarjetas rojas**.")
-st.write("**Instrucciones:** Haz clic/toca a la **izquierda o derecha** de Juan y **mantén presionado** para cargar fuerza. Suelta para lanzar el anzuelo.")
+st.subheader("🎣 Minijuego: La Pesca de Juan (Misterio Submarino)")
+st.write("Pesca **10 Juanes** en el menor tiempo posible. ¡Cuidado, todos los bultos se ven iguales hasta que los picas!")
+st.write("**Instrucciones:** 1) Haz clic/toca en el lado hacia donde quieras lanzar y **mantén pulsado** para la **Fuerza (X)**. 2) Vuelve a **mantener pulsado** para fijar la **Profundidad (Y)**.")
 
-# Reutilizamos la lógica de imagen base64 del dino
+# Reutilizamos la lógica de imagen base64
 img_base64_pesca = img_base64 
 
 html_pesca = f"""
@@ -747,29 +745,33 @@ html_pesca = f"""
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
     body {{ margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; touch-action: none; background: #87CEEB; }}
-    #game-canvas {{ background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 40%, #1E90FF 40%, #00008B 100%); display: block; }}
-    #ui {{ position: absolute; top: 10px; left: 10px; color: white; text-shadow: 1px 1px 2px black; pointer-events: none; }}
-    #penalty-timer {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff4444; font-size: 40px; font-weight: bold; display: none; text-align: center; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; }}
-    #win-screen {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 15px; text-align: center; display: none; box-shadow: 0 0 20px rgba(0,0,0,0.5); }}
-    .btn {{ background: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }}
+    #game-container {{ position: relative; width: 100%; max-width: 800px; margin: 0 auto; }}
+    #game-canvas {{ background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 35%, #1E90FF 35%, #051937 100%); display: block; width: 100%; height: 450px; }}
+    #ui {{ position: absolute; top: 10px; left: 10px; color: white; text-shadow: 1px 1px 2px black; pointer-events: none; font-weight: bold; font-size: 14px; }}
+    #penalty-timer {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff4444; font-size: 35px; font-weight: bold; display: none; text-align: center; background: rgba(0,0,0,0.75); padding: 20px; border-radius: 15px; box-shadow: 0 0 15px red; }}
+    #win-screen {{ position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 15px; text-align: center; display: none; box-shadow: 0 0 25px rgba(0,0,0,0.5); }}
+    .btn {{ background: #2ecc71; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 12px; font-size: 14px; }}
 </style>
 </head>
 <body>
 
-<div id="ui">
-    <div>Juanes: <span id="score">0</span> / 10</div>
-    <div>Tiempo: <span id="clock">0.0</span>s</div>
+<div id="game-container">
+    <div id="ui">
+        <div>👤 Juanes: <span id="score">0</span> / 10</div>
+        <div>⏱️ Tiempo: <span id="clock">0.0</span>s</div>
+        <div id="instruction-text" style="color: #ffeb3b; margin-top: 5px;">Apunta y mantén para FUERZA</div>
+    </div>
+
+    <div id="penalty-timer">🟥 PENALIZACIÓN<br><span id="p-seconds">5</span>s</div>
+
+    <div id="win-screen">
+        <h2>🏆 ¡PESCA COMPLETADA!</h2>
+        <p id="final-time-text"></p>
+        <button id="save-pesca-btn" class="btn">💾 Registrar Tiempo</button>
+    </div>
+
+    <canvas id="game-canvas"></canvas>
 </div>
-
-<div id="penalty-timer">🚫 EXPULSADO<br><span id="p-seconds">5</span>s</div>
-
-<div id="win-screen">
-    <h2>🏆 ¡PESCA COMPLETADA!</h2>
-    <p id="final-time-text"></p>
-    <button id="save-pesca-btn" class="btn">💾 Registrar Tiempo</button>
-</div>
-
-<canvas id="game-canvas"></canvas>
 
 <script>
     const canvas = document.getElementById('game-canvas');
@@ -779,16 +781,19 @@ html_pesca = f"""
     const winScreen = document.getElementById('win-screen');
     const penaltyEl = document.getElementById('penalty-timer');
     const pSecondsEl = document.getElementById('p-seconds');
+    const insText = document.getElementById('instruction-text');
 
-    let width, height;
-    function resize() {{
-        width = window.innerWidth;
-        height = 400;
+    let width = 800;
+    let height = 450;
+    
+    function initCanvas() {{
+        const container = document.getElementById('game-container');
+        width = container.offsetWidth || 800;
         canvas.width = width;
         canvas.height = height;
     }}
-    window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener('resize', initCanvas);
+    setTimeout(initCanvas, 100);
 
     // Imagen del pescador
     const juanImg = new Image();
@@ -802,44 +807,53 @@ html_pesca = f"""
     let isGameOver = false;
     let penaltyTime = 0;
     let nPenalties = 0;
-    let charging = false;
-    let chargePower = 0;
-    let chargeDir = 1; // 1 derecha, -1 izquierda
     
-    // Anzuelo
-    let hook = {{ x: 0, y: 0, active: false, tx: 0, ty: 0, state: 'idle', power: 0 }};
+    // Mecánica de doble barra
+    let inputState = 'idle'; // 'idle', 'charging_x', 'charging_y', 'launching', 'returning'
+    let chargeX = 0;
+    let chargeY = 0;
+    let chargeDir = 1; // 1 derecha, -1 izquierda
 
-    // Objetos
+    // Anzuelo objetivo y actual
+    let hook = {{ x: 0, y: 0, targetX: 0, targetY: 0, size: 6, revealItem: null, revealTimer: 0 }};
+
     const TYPES = {{ JUAN: 'juan', BALL: 'ball', CARD: 'card' }};
     let objects = [];
 
     function spawnObject() {{
         const prob = Math.random();
         let type = TYPES.BALL;
-        if (prob < 0.2) type = TYPES.JUAN;
-        else if (prob < 0.4) type = TYPES.CARD;
+        if (prob < 0.2) type = TYPES.JUAN; // 20% Juanes
+        else if (prob < 0.4) type = TYPES.CARD; // 20% Tarjetas rojas
 
         return {{
             x: Math.random() * width,
-            y: 200 + Math.random() * 150,
+            baseY: 190 + Math.random() * 210, // Rango en el agua
+            y: 0,
             type: type,
-            vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 5 : 2),
+            vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 4 : 1.5),
             ax: 0,
-            size: type === TYPES.JUAN ? 25 : 20,
+            depthSpeed: 0.01 + Math.random() * 0.03,
+            depthAmp: 15 + Math.random() * 25,
+            phase: Math.random() * Math.PI * 2,
+            size: 18,
             lastFlip: Date.now()
         }};
     }}
 
-    for(let i=0; i<10; i++) objects.push(spawnObject());
+    // Poblamos el mar con SIEMPRE 50 bultos
+    for(let i=0; i<50; i++) {{
+        objects.push(spawnObject());
+    }}
 
     function update() {{
         if (isGameOver) return;
 
-        // Reloj
         const now = Date.now();
         if (penaltyTime > now) {{
             penaltyEl.style.display = 'block';
             pSecondsEl.innerText = Math.ceil((penaltyTime - now)/1000);
+            inputState = 'idle';
             return;
         }} else {{
             penaltyEl.style.display = 'none';
@@ -847,47 +861,86 @@ html_pesca = f"""
         
         clockEl.innerText = ((now - startTime) / 1000).toFixed(1);
 
-        // Carga de fuerza
-        if (charging) {{
-            chargePower = Math.min(chargePower + 2, 100);
-        }}
+        // Actualizar textos de ayuda dinámicos
+        if (inputState === 'idle') insText.innerText = "Apunta y mantén para FUERZA (X)";
+        if (inputState === 'charging_x') insText.innerText = "¡Cargando distancia horizontal!";
+        if (inputState === 'charging_y') insText.innerText = "¡Mantén para regular PROFUNDIDAD (Y)!";
+        if (inputState === 'launching' || inputState === 'returning') insText.innerText = "Lanzamiento en curso...";
 
-        // Movimiento de objetos
+        // Incremento de barras
+        if (inputState === 'charging_x') chargeX = Math.min(chargeX + 1.5, 100);
+        if (inputState === 'charging_y') chargeY = Math.min(chargeY + 2, 100);
+
+        // Movimiento e hidrodinámica de los 50 bultos
         objects.forEach(obj => {{
             if (obj.type === TYPES.JUAN) {{
-                obj.ax = (Math.random() - 0.5) * 0.5;
-                if (Date.now() - obj.lastFlip > 1000) {{
-                    if (Math.random() > 0.8) obj.vx *= -1;
-                    obj.lastFlip = Date.now();
+                obj.ax = (Math.random() - 0.5) * 0.4;
+                if (now - obj.lastFlip > 800) {{
+                    if (Math.random() > 0.7) obj.vx *= -1;
+                    obj.lastFlip = now;
                 }}
             }}
             obj.vx += obj.ax;
-            // Limitar velocidad
-            let maxV = obj.type === TYPES.JUAN ? 4 : 1.5;
+            let maxV = obj.type === TYPES.JUAN ? 3.5 : 1.2;
             obj.vx = Math.max(Math.min(obj.vx, maxV), -maxV);
             
             obj.x += obj.vx;
             if (obj.x < 0 || obj.x > width) obj.vx *= -1;
+
+            // Oscilación vertical (Subir y bajar profundidad)
+            obj.phase += obj.depthSpeed;
+            obj.y = obj.baseY + Math.sin(obj.phase) * obj.depthAmp;
+            // Evitar que salgan del agua
+            if (obj.y < 165) obj.y = 165;
+            if (obj.y > height - 10) obj.y = height - 10;
         }});
 
-        // Anzuelo
-        if (hook.state === 'launching') {{
-            hook.y += 5;
-            if (hook.y > height - 20) hook.state = 'returning';
-            
-            // Colisión
-            objects.forEach((obj, i) => {{
-                let dx = hook.x - obj.x;
-                let dy = hook.y - obj.y;
-                let dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist < obj.size) {{
-                    catchObject(obj, i);
-                    hook.state = 'returning';
+        // Control del Anzuelo Físico
+        if (inputState === 'launching') {{
+            // Viaja hacia el objetivo interpolando
+            let dx = hook.targetX - hook.x;
+            let dy = hook.targetY - hook.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist > 8) {{
+                hook.x += (dx / dist) * 8;
+                hook.y += (dy / dist) * 8;
+            }} else {{
+                // Llegó al fondo del tiro, comprobar si pescó algo
+                let targetHit = null;
+                let hitIndex = -1;
+
+                for(let i=0; i<objects.length; i++) {{
+                    let o = objects[i];
+                    let odx = hook.x - o.x;
+                    let ody = hook.y - o.y;
+                    if (Math.sqrt(odx*odx + ody*ody) < o.size + 5) {{
+                        targetHit = o;
+                        hitIndex = i;
+                        break;
+                    }}
                 }}
-            }});
-        }} else if (hook.state === 'returning') {{
-            hook.y -= 7;
-            if (hook.y <= 150) hook.state = 'idle';
+
+                if (targetHit) {{
+                    // Al pescarse, se revela el misterio
+                    hook.revealItem = targetHit.type;
+                    hook.revealTimer = now + 1200; // Mostrar animación 1.2s
+                    catchObject(targetHit, hitIndex);
+                }}
+                inputState = 'returning';
+            }}
+        }} else if (inputState === 'returning') {{
+            let dx = (width/2) - hook.x;
+            let dy = 135 - hook.y;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+
+            if (dist > 10) {{
+                hook.x += (dx / dist) * 12;
+                hook.y += (dy / dist) * 12;
+            }} else {{
+                inputState = 'idle';
+                hook.revealItem = null;
+            }}
         }}
     }}
 
@@ -898,8 +951,9 @@ html_pesca = f"""
             if (score >= 10) win();
         }} else if (obj.type === TYPES.CARD) {{
             nPenalties++;
-            penaltyTime = Date.now() + (4 + nPenalties) * 1000;
+            penaltyTime = Date.now() + (4 + nPenalties) * 1000; // n + 5 segundos analíticamente
         }}
+        // Se regenera al instante para mantener siempre 50
         objects[index] = spawnObject();
     }}
 
@@ -907,83 +961,134 @@ html_pesca = f"""
         isGameOver = true;
         const finalTime = ((Date.now() - startTime) / 1000).toFixed(2);
         winScreen.style.display = 'block';
-        document.getElementById('final-time-text').innerText = "Tiempo total: " + finalTime + " segundos";
+        document.getElementById('final-time-text').innerText = "¡Has atrapado los 10 Juanes en " + finalTime + "s!";
         document.getElementById('save-pesca-btn').onclick = () => {{
             let parentUrl = document.referrer.split('?')[0]; 
-            window.open(parentUrl + '?pesca_time=' + finalTime, '_blank');
+            window.open(parentUrl + '?game_pesca_score=' + finalTime, '_blank');
         }};
     }}
 
     function draw() {{
         ctx.clearRect(0, 0, width, height);
 
-        // Plataforma
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(width/2 - 40, 140, 80, 10);
+        // Dibujar el fondo marino y bultos ocultos
+        objects.forEach(obj => {{
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, 8, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(30, 60, 90, 0.4)'; // Bulto misterioso bajo el agua
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.font = "10px sans-serif";
+            ctx.fillText("❓", obj.x - 5, obj.y + 4);
+        }});
 
-        // Juan Pescador
+        // Muelle de madera
+        ctx.fillStyle = '#704214';
+        ctx.fillRect(width/2 - 35, 135, 70, 15);
+
+        // Pescador Juan
         if (imageLoaded) {{
-            ctx.drawImage(juanImg, width/2 - 30, 75, 60, 70);
+            ctx.drawImage(juanImg, width/2 - 25, 75, 50, 65);
         }} else {{
-            ctx.fillStyle = 'blue';
-            ctx.fillRect(width/2 - 15, 90, 30, 50);
+            ctx.fillStyle = '#e67e22';
+            ctx.fillRect(width/2 - 12, 85, 24, 50);
         }}
 
-        // Barra de fuerza
-        if (charging) {{
-            ctx.fillStyle = 'red';
-            ctx.fillRect(width/2 - 50, 60, chargePower, 10);
-            ctx.strokeStyle = 'white';
-            ctx.strokeRect(width/2 - 50, 60, 100, 10);
+        // HUD de Lanzamiento e Interfaz de barras de control
+        if (inputState === 'charging_x') {{
+            // Barra Horizontal (Fuerza)
+            ctx.fillStyle = '#e74c3c';
+            ctx.fillRect(width/2 - 50, 50, chargeX, 8);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(width/2 - 50, 50, 100, 8);
+        }} else if (inputState === 'charging_y') {{
+            // Barra Vertical (Profundidad)
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(width/2 - 50, 62, chargeY, 8);
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(width/2 - 50, 62, 100, 8);
         }}
 
-        // Hilo y Anzuelo
-        if (hook.state !== 'idle') {{
+        // Línea de pesca y Anzuelo
+        if (inputState === 'launching' || inputState === 'returning') {{
             ctx.beginPath();
             ctx.moveTo(width/2, 110);
             ctx.lineTo(hook.x, hook.y);
-            ctx.strokeStyle = 'white';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 1.5;
             ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(hook.x, hook.y, 5, 0, Math.PI*2);
-            ctx.fillStyle = 'silver';
-            ctx.fill();
-        }}
 
-        // Dibujar objetos
-        objects.forEach(obj => {{
-            ctx.font = obj.size + "px serif";
-            let icon = '⚽';
-            if (obj.type === TYPES.JUAN) icon = '👤';
-            if (obj.type === TYPES.CARD) icon = '🟥';
-            ctx.fillText(icon, obj.x - obj.size/2, obj.y + obj.size/2);
-        }});
+            // Anzuelo metálico
+            ctx.beginPath();
+            ctx.arc(hook.x, hook.y, hook.size, 0, Math.PI*2);
+            ctx.fillStyle = '#bdc3c7';
+            ctx.fill();
+
+            // Revelación de la pieza obtenida
+            if (hook.revealItem && Date.now() < hook.revealTimer) {{
+                ctx.font = "24px serif";
+                let badge = '⚽';
+                if (hook.revealItem === TYPES.JUAN) badge = '👤 ¡JUAN!';
+                if (hook.revealItem === TYPES.CARD) badge = '🟥 ¡TARJETA!';
+                ctx.fillStyle = '#fff';
+                ctx.fillText(badge, hook.x + 10, hook.y - 10);
+            }}
+        }}
 
         requestAnimationFrame(() => {{ update(); draw(); }});
     }}
 
-    function inputStart(e) {{
-        if (isGameOver || penaltyTime > Date.now() || hook.state !== 'idle') return;
-        charging = true;
-        chargePower = 0;
-        let x = e.clientX || e.touches[0].clientX;
-        chargeDir = x < width/2 ? -1 : 1;
+    // Control unificado para Raton, Espacio y Pantallas Táctiles
+    function handleActionStart(clientX) {{
+        if (isGameOver || Date.now() < penaltyTime) return;
+
+        if (inputState === 'idle') {{
+            inputState = 'charging_x';
+            chargeX = 0;
+            chargeDir = clientX < (width / 2) ? -1 : 1;
+        }} else if (inputState === 'charging_y') {{
+            chargeY = 0;
+        }}
     }}
 
-    function inputEnd() {{
-        if (!charging) return;
-        charging = false;
-        hook.state = 'launching';
-        hook.x = (width/2) + (chargePower * 2 * chargeDir);
-        hook.y = 150;
+    function handleActionEnd() {{
+        if (inputState === 'charging_x') {{
+            inputState = 'charging_y';
+        }} else if (inputState === 'charging_y') {{
+            inputState = 'launching';
+            
+            // La fuerza máxima calculada mapea exactamente hasta los bordes
+            let distanceX = (chargeX / 100) * (width / 2) * chargeDir;
+            hook.targetX = (width / 2) + distanceX;
+            
+            // La profundidad calcula el recorrido en el agua (de Y=160 a Y=440)
+            hook.targetY = 160 + ((chargeY / 100) * 280);
+            
+            hook.x = width / 2;
+            hook.y = 135;
+        }}
     }}
 
-    window.addEventListener('mousedown', inputStart);
-    window.addEventListener('mouseup', inputEnd);
-    window.addEventListener('touchstart', inputStart);
-    window.addEventListener('touchend', inputEnd);
-    window.addEventListener('keydown', (e) => {{ if(e.code === 'Space') inputStart({{clientX: width/2 + 10}}); }});
-    window.addEventListener('keyup', (e) => {{ if(e.code === 'Space') inputEnd(); }});
+    // Eventos de ratón y táctil
+    window.addEventListener('mousedown', (e) => {{
+        if(e.target.id === 'save-pesca-btn') return;
+        handleActionStart(e.clientX);
+    }});
+    window.addEventListener('mouseup', handleActionEnd);
+
+    window.addEventListener('touchstart', (e) => {{
+        if(e.target.id === 'save-pesca-btn') return;
+        handleActionStart(e.touches[0].clientX);
+    }});
+    window.addEventListener('touchend', handleActionEnd);
+
+    // Soporte Teclado (Barra Espaciadora lanza por defecto a la derecha)
+    window.addEventListener('keydown', (e) => {{
+        if (e.code === 'Space') {{ e.preventDefault(); handleActionStart(width/2 + 100); }}
+    }});
+    window.addEventListener('keyup', (e) => {{
+        if (e.code === 'Space') handleActionEnd();
+    }});
 
     draw();
 </script>
@@ -991,32 +1096,40 @@ html_pesca = f"""
 </html>
 """
 
-components.html(html_pesca, height=450)
+components.html(html_pesca, height=470)
+
 
 # ==============================================================================
-# --- 🛠️ RECEPCIÓN DE MARCADORES PESCA ---
+# --- 🛠️ RECEPCIÓN DE MARCADORES AUTOMÁTICOS DE PESCA ---
 # ==============================================================================
-st.markdown("### 💾 Guardar Récord de Pesca")
+st.markdown("### 💾 Registro del Pescador")
 
-puntos_pesca = st.query_params.get("pesca_time")
+tiempo_pesca_detectado = None
+if "game_pesca_score" in st.query_params:
+    try:
+        tiempo_pesca_detectado = float(st.query_params["game_pesca_score"])
+    except ValueError:
+        tiempo_pesca_detectado = None
 
-if puntos_pesca:
-    st.success(f"🎯 **¡Pesca completada!** Tiempo: **{puntos_pesca} segundos**")
-    # Filtramos para que solo aparezcan los que no han registrado este tiempo específico 
-    # (O usa la misma lista jugadores_sopa si quieres que solo ganen una vez)
-    with st.form("guardar_record_pesca", clear_on_submit=True):
-        jugador_seleccionado = st.selectbox("Selecciona tu nombre:", JUGADORES_BASE, key="pesca_user_reg")
-        submit_pesca = st.form_submit_button("🥇 Registrar mi Tiempo")
+if tiempo_pesca_detectado is not None:
+    st.info(f"🎯 **¡Increíble captura!** Tiempo registrado: **{tiempo_pesca_detectado} segundos**")
+    
+    with st.form("guardar_record_pesca_misterio", clear_on_submit=True):
+        jugador_seleccionado = st.selectbox("Selecciona tu nombre para la posteridad:", JUGADORES_BASE, key="pesca_user_final")
+        submit_record = st.form_submit_button("🥇 Inmortalizar Tiempo de Pesca")
         
-        if submit_pesca and jugador_seleccionado:
-            nombre_registro = f"{jugador_seleccionado} (Pesca: {puntos_pesca}s a las {datetime.now().strftime('%H:%M')})"
+        if submit_record and jugador_seleccionado:
+            hora_actual = datetime.now().strftime("%H:%M:%S")
+            nombre_registro = f"{jugador_seleccionado} (Pesca: {tiempo_pesca_detectado}s a las {hora_actual})"
+            
             guardar_ganador(nombre_registro)
-            st.success("¡Tiempo guardado!")
+            st.success(f"¡Récord de pesca guardado para {jugador_seleccionado}!")
+            
             st.query_params.clear()
             st.rerun()
             
-    if st.button("❌ Limpiar"):
+    if st.button("❌ Descartar marca"):
         st.query_params.clear()
         st.rerun()
 else:
-    st.caption("🎣 Completa la pesca para registrar tu tiempo.")
+    st.caption("🏃‍♂️ Lanza el anzuelo usando la sincronización de las dos barras. Al atrapar 10 Juanes se habilitará este formulario.")

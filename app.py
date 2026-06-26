@@ -725,12 +725,13 @@ if puntos_detectados is not None:
 else:
     st.caption("🏃‍♂️ Juega una partida. Al perder, pulsa el botón verde dentro del juego y este panel se activará solo con tus puntos.")
 
+
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN PATERA ACELERADA Y CAMUFLAJE) ---
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (VERSIÓN CORREGIDA Y OPTIMIZADA) ---------
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 Minijuego: La Pesca de Juan (Aceleración Progresiva y Camuflaje Total)")
-st.write("¡Atención! La patera gana velocidad conforme se acerca al muelle. Además, los Juanines ocultos ahora se camuflan perfectamente.")
+st.subheader("🎣 Minijuego: La Pesca de Juan (Versión Estable)")
+st.write("¡Solucionado! El ecosistema ya está activo. Calcula las trayectorias y vigila la patera.")
 
 img_base64_pesca = img_base64 
 
@@ -844,8 +845,6 @@ html_pesca = f"""
     let fixedAngle = 0; let chargeForce = 0;
     
     let heli = {{ x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, returnTime: 0 }};
-
-    // MODIFICACIÓN PATERA: Ajuste de velocidad inicial base y variables de aceleración
     let patera = {{ active: false, x: 0, y: 0, startX: 0, baseVx: 0, sizeW: 45, sizeH: 22, spawnTimer: Date.now() + 55000 }};
 
     let rainDrops = [];
@@ -923,31 +922,25 @@ html_pesca = f"""
             if (heli.x > width - 40) {{ heli.x = width - 40; heli.vx *= -1; }}
         }}
 
-        // Temporizador de Patera (Cada 55 segundos)
+        // Temporizador de Patera Corregido
         if (!patera.active && now > patera.spawnTimer) {{
-            pactive = true;
             patera.active = true;
             let seaLine = height * 0.35; if(seaLine < 180) seaLine = 180;
             patera.y = seaLine - 8;
             
             if (Math.random() > 0.5) {{
-                patera.x = -50; patera.startX = -50; patera.baseVx = 0.3; // Comienza extremadamente lenta
+                patera.x = -50; patera.startX = -50; patera.baseVx = 0.3;
             }} else {{
                 patera.x = width + 50; patera.startX = width + 50; patera.baseVx = -0.3;
             }}
             triggerGiantAlert("⛵ ¡ALERTA: PATERA DETECTADA!\\nInicia muy lento, pero acelerará al acercarse. ¡Frénala!", "#f1c40f");
         }}
 
-        // MODIFICACIÓN DINÁMICA DE LA PATERA: Aceleración progresiva conforme se acerca al centro
         if (patera.active && now >= globalPauseUntil) {{
             let center = width / 2;
             let totalDistance = Math.abs(patera.startX - center);
             let currentDistance = Math.abs(patera.x - center);
-            
-            // Factor de cercanía: 0 al inicio, se acerca a 1 en el centro
             let closeness = 1 - (currentDistance / totalDistance);
-            
-            // Curva de aceleración exponencial progresiva (Multiplicador de velocidad de hasta x12 en el tramo final)
             let speedMultiplier = 1 + (Math.pow(closeness, 2.5) * 11.5);
             let currentVx = patera.baseVx * speedMultiplier;
             
@@ -987,7 +980,8 @@ html_pesca = f"""
             nextSpawnTime = now + 5000;
         }}
 
-        // Física Marina
+        let seaTopBoundary = height * 0.35; if(seaTopBoundary < 180) seaTopBoundary = 180;
+
         for (let i = objects.length - 1; i >= 0; i--) {{
             let obj = objects[i];
             if (now - obj.lastDirectionChange > obj.changeInterval) {{
@@ -1002,7 +996,6 @@ html_pesca = f"""
             if (obj.y > height - 25) obj.y = height - 25;
         }}
 
-        // Sedal
         if (inputState === 'launching') {{
             if (hook.mode === 'parabolic') {{
                 hook.x += hook.vx; hook.vy += 0.38; hook.y += hook.vy;
@@ -1021,7 +1014,6 @@ html_pesca = f"""
                     let targetHit = null; let hitIndex = -1;
                     for(let i=0; i<objects.length; i++) {{
                         let o = objects[i];
-                        // MODIFICACIÓN DINÁMICA DE RECOLECCIÓN: Determinar colisión según el tamaño visual activo de captura
                         let activeSize = o.discovered ? (o.isJuanin ? 15 : 28) : 28;
                         if (Math.sqrt((hook.x - o.x)**2 + (hook.y - o.y)**2) < activeSize) {{
                             targetHit = o; hitIndex = i; break;
@@ -1082,7 +1074,6 @@ html_pesca = f"""
         update(); ctx.clearRect(0, 0, width, height);
         let seaLine = height * 0.35; if(seaLine < 180) seaLine = 180;
 
-        // Fondos
         ctx.fillStyle = '#70b5d3'; ctx.fillRect(0, 0, width, seaLine);
         let seaGrad = ctx.createLinearGradient(0, seaLine, 0, height);
         seaGrad.addColorStop(0, '#1E90FF'); seaGrad.addColorStop(1, '#051937');
@@ -1104,17 +1095,12 @@ html_pesca = f"""
             ctx.font = "12px sans-serif"; ctx.fillText("⛵ PATERA", patera.x - 24, patera.y - 6);
         }}
 
-        // Renderizado de Bultos Submarinos
         objects.forEach(obj => {{
-            // MODIFICACIÓN CAMUFLAJE: Si está oculto, obliga a que mida un tamaño estándar de 28px
             let renderSize = obj.discovered ? (obj.isJuanin ? 15 : 28) : 28;
-
             ctx.beginPath();
             ctx.arc(obj.x, obj.y, renderSize, 0, Math.PI*2);
             ctx.fillStyle = obj.discovered ? 'rgba(30, 85, 145, 0.9)' : 'rgba(24, 48, 89, 0.95)';
             ctx.fill();
-            
-            // Si está oculto, el borde es genérico para no desvelar al Juanín
             ctx.strokeStyle = (obj.discovered && obj.isJuanin) ? '#ffeb3b' : 'rgba(255,255,255,0.4)';
             ctx.lineWidth = (obj.discovered && obj.isJuanin) ? 2.5 : 1.5;
             ctx.stroke();
@@ -1126,7 +1112,6 @@ html_pesca = f"""
                 ctx.fillStyle = '#fff'; ctx.font = "bold 16px sans-serif";
                 ctx.fillText(obj.type === TYPES.CARD ? '🟥' : '⚽', obj.x - 8, obj.y + 6);
             }} else {{
-                // Camuflaje absoluto: Cualquier bulto oculto muestra el mismo misterio estándar
                 ctx.fillStyle = '#fff'; ctx.font = "bold 15px sans-serif";
                 ctx.fillText("❓", obj.x - 6, obj.y + 5);
             }}
@@ -1135,7 +1120,6 @@ html_pesca = f"""
         ctx.fillStyle = '#5c3a21'; ctx.fillRect(width/2 - 35, seaLine - 15, 70, 15);
         if (imageLoaded) ctx.drawImage(juanImg, width/2 - 22, seaLine - 72, 44, 60);
 
-        // Radar Mixto
         let radarRadius = 50; let radarX = width/2; let radarY = seaLine;
         ctx.beginPath();
         ctx.arc(radarX, radarY, radarRadius, 0, patera.active ? Math.PI*2 : Math.PI, false);

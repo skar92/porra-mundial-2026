@@ -728,11 +728,11 @@ else:
 
 
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN  ---
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN MÓVIL FULLSCREEN & RADAR) ---
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 La Pesca de Juan ")
-st.write("Pesca **10 Juanes**. Los bultos son gigantes, pero los eventos congelarán el océano.")
+st.subheader("🎣 Minijuego: La Pesca de Juan ")
+st.write("Pesca **10 Juanes**. En móvil, pulsa el botón para jugar de forma óptima en horizontal.")
 
 img_base64_pesca = img_base64 
 
@@ -740,19 +740,26 @@ html_pesca = f"""
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <style>
     body {{ margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; user-select: none; touch-action: none; background: #87CEEB; }}
-    #game-container {{ position: relative; width: 100%; max-width: 800px; margin: 0 auto; }}
+    #game-container {{ position: relative; width: 100%; max-width: 800px; margin: 0 auto; background: #000; }}
     #game-canvas {{ background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 35%, #1E90FF 35%, #051937 100%); display: block; width: 100%; height: 500px; }}
     #ui {{ position: absolute; top: 10px; left: 10px; color: white; text-shadow: 1px 1px 2px black; pointer-events: none; font-weight: bold; font-size: 13px; z-index: 10; }}
     
+    /* Botón Móvil Pantalla Completa / Horizontal */
+    #fullscreen-btn {{
+        position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7);
+        color: #ffeb3b; border: 2px solid #ffeb3b; padding: 6px 12px; border-radius: 20px;
+        font-weight: bold; font-size: 11px; cursor: pointer; z-index: 50; display: block;
+    }}
+
     /* Cartel cinematográfico gigante */
     #giant-alert {{ 
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-        color: white; font-size: 38px; font-weight: bold; text-align: center; 
-        background: rgba(0, 0, 0, 0.9); padding: 40px; border-radius: 20px; 
-        box-shadow: 0 0 30px rgba(255,255,255,0.4); display: none; z-index: 40; width: 80%; max-width: 600px;
+        color: white; font-size: 36px; font-weight: bold; text-align: center; 
+        background: rgba(0, 0, 0, 0.95); padding: 40px; border-radius: 20px; 
+        box-shadow: 0 0 30px rgba(255,255,255,0.4); display: none; z-index: 40; width: 85%; max-width: 600px;
         box-sizing: border-box; border: 4px solid #ffeb3b; line-height: 1.4;
     }}
     
@@ -764,15 +771,16 @@ html_pesca = f"""
 <body>
 
 <div id="game-container">
+    <button id="fullscreen-btn">📱 FULLSCREEN + HORIZONTAL</button>
+
     <div id="ui">
         <div>👤 Juanes: <span id="score">0</span> / 10</div>
         <div>⏱️ Tiempo: <span id="clock">0.0</span>s</div>
         <div>🐟 Bultos: <span id="pop-count">0</span></div>
-        <div id="instruction-text" style="color: #ffeb3b; margin-top: 5px;">Clica para fijar el ÁNGULO</div>
+        <div id="instruction-text" style="color: #ffeb3b; margin-top: 5px;">Toca para fijar el ÁNGULO</div>
     </div>
     
     <div id="giant-alert"></div>
-
     <div id="penalty-timer">🟥 PENALIZACIÓN<br><span id="p-seconds">5</span>s</div>
 
     <div id="win-screen">
@@ -795,42 +803,85 @@ html_pesca = f"""
     const pSecondsEl = document.getElementById('p-seconds');
     const insText = document.getElementById('instruction-text');
     const giantAlert = document.getElementById('giant-alert');
+    const fsBtn = document.getElementById('fullscreen-btn');
+    const container = document.getElementById('game-container');
 
     let width = 800; let height = 500;
-    function initCanvas() {{
-        const container = document.getElementById('game-container');
-        width = container.offsetWidth || 800;
-        canvas.width = width; canvas.height = height;
+    
+    function resizeGame() {{
+        if (document.fullscreenElement) {{
+            // Modo Pantalla Completa Móvil
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.style.height = height + "px";
+        }} else {{
+            // Modo Streamlit estándar
+            width = container.offsetWidth || 800;
+            height = 500;
+            canvas.style.height = "500px";
+        }}
+        canvas.width = width;
+        canvas.height = height;
     }}
-    window.addEventListener('resize', initCanvas);
-    setTimeout(initCanvas, 100);
+    window.addEventListener('resize', resizeGame);
+    setTimeout(resizeGame, 150);
+
+    // Activación Fullscreen + Bloqueo de Orientación Horizontal
+    fsBtn.addEventListener('click', async (e) => {{
+        e.stopPropagation();
+        try {{
+            if (!document.fullscreenElement) {{
+                if (container.requestFullscreen) {{
+                    await container.requestFullscreen();
+                }} else if (container.webkitRequestFullscreen) {{
+                    await container.webkitRequestFullscreen();
+                }}
+                
+                // Intentar forzar rotación a horizontal
+                if (screen.orientation && screen.orientation.lock) {{
+                    await screen.orientation.lock('landscape').catch(err => {{
+                        console.log("Rotación automática no permitida sin gestos rigurosos:", err);
+                    }});
+                }}
+            }} else {{
+                document.exitFullscreen();
+            }}
+        }} catch (err) {{
+            console.error("Error al activar Fullscreen:", err);
+        }}
+    }});
+
+    document.addEventListener('fullscreenchange', () => {{
+        if (!document.fullscreenElement) {{
+            if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+        }}
+        setTimeout(resizeGame, 100);
+    }});
 
     const juanImg = new Image(); let imageLoaded = false;
     juanImg.src = "data:image/png;base64,{img_base64_pesca}";
     juanImg.onload = () => imageLoaded = true;
 
-    // Control y Estados
+    // Control Interno
     let score = 0; let accumulatedTime = 0; let lastTimeCheck = Date.now(); let isGameOver = false;
     let penaltyTime = 0; let nPenalties = 0;
-    
-    // Pausa por eventos de 2 segundos
     let globalPauseUntil = 0;
 
-    // Radar e Inputs
+    // Mecánica Radar
     let inputState = 'angle'; 
     let angleParam = 0; let angleSpeed = 0.03;
     let fixedAngle = 0; let chargeForce = 0;
     
-    // Partículas de lluvia tóxica visual
+    // Lluvia visual partículas
     let rainDrops = [];
     let isRainingVisual = false;
     let rainVisualEnd = 0;
 
     function triggerGiantAlert(message, borderColor = '#ffeb3b') {{
-        giantAlert.innerText = message;
+        giantAlert.innerHTML = message.replace(/\\n/g, "<br>");
         giantAlert.style.borderColor = borderColor;
         giantAlert.style.display = 'block';
-        globalPauseUntil = Date.now() + 2000; // Congelar juego 2 segundos
+        globalPauseUntil = Date.now() + 2000; 
         
         setTimeout(() => {{
             giantAlert.style.display = 'none';
@@ -857,7 +908,7 @@ html_pesca = f"""
         objects.push({{
             id: Math.random().toString(36),
             x: Math.random() * width,
-            baseY: 210 + Math.random() * 240,
+            baseY: 220 + Math.random() * (height - 260),
             y: 0,
             type: type,
             vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 3.5 : 1.2),
@@ -865,12 +916,12 @@ html_pesca = f"""
             depthSpeed: 0.01 + Math.random() * 0.02,
             depthAmp: 10 + Math.random() * 25,
             phase: Math.random() * Math.PI * 2,
-            size: 28, // MULTIPLICADO POR 2: Bultos gigantescos de radio 28px (Fácil acierto)
+            size: 28, // Tamaño masivo duplicado para facilitar jugabilidad táctil
             spawnTime: Date.now()
         }});
     }}
 
-    // Llenar el mar inicialmente
+    // Mar inicializado
     for(let i=0; i<30; i++) spawnObject();
 
     let nextSpawnTime = Date.now() + (5000 + Math.random() * 35000);
@@ -884,13 +935,8 @@ html_pesca = f"""
         lastTimeCheck = now;
 
         if (isGameOver) return;
+        if (now < globalPauseUntil) return; // Pausa absoluta ante eventos dramáticos
 
-        // Si el juego está en pausa gigante, NO actualizar mecánicas ni reloj
-        if (now < globalPauseUntil) {{
-            return;
-        }}
-
-        // Penalizaciones por tarjeta
         if (penaltyTime > now) {{
             penaltyEl.style.display = 'block';
             pSecondsEl.innerText = Math.ceil((penaltyTime - now)/1000);
@@ -904,8 +950,8 @@ html_pesca = f"""
         clockEl.innerText = (accumulatedTime / 1000).toFixed(1);
         popEl.innerText = objects.length;
 
-        if (inputState === 'angle') insText.innerText = "Fija el ÁNGULO";
-        if (inputState === 'force') insText.innerText = "¡Mantén para la FUERZA!";
+        if (inputState === 'angle') insText.innerText = "Toca para fijar ÁNGULO";
+        if (inputState === 'force') insText.innerText = "¡Mantén para regular FUERZA!";
 
         if (inputState === 'angle') {{
             angleParam += angleSpeed;
@@ -915,14 +961,14 @@ html_pesca = f"""
             chargeForce = Math.min(chargeForce + 1.8, 100);
         }}
 
-        // Inputs de bultos periódicos (5 a 40 segundos)
+        // Spawns dinámicos de bultos
         if (now > nextSpawnTime) {{
             let batch = Math.floor(4 + Math.random() * 8);
             for(let k=0; k<batch; k++) spawnObject();
             nextSpawnTime = now + (5000 + Math.random() * 35000);
         }}
 
-        // Ejecución de Lluvia Tóxica con animación visual
+        // Ejecución Lluvia Tóxica
         if (now > nextToxicRainTime) {{
             let killCount = Math.floor(objects.length * 0.20);
             for (let i = 0; i < killCount; i++) {{
@@ -932,18 +978,18 @@ html_pesca = f"""
                 }}
             }}
             isRainingVisual = true;
-            rainVisualEnd = now + 4000; // Dura un poco más visualmente
+            rainVisualEnd = now + 4000;
             
-            triggerGiantAlert("🌧️ ¡LLUVIA TÓXICA!\\nEliminado el 20% de la población marina", "#e74c3c");
+            triggerGiantAlert("🌧️ ¡LLUVIA TÓXICA!\\nEliminado el 20% de bultos al azar", "#e74c3c");
             nextToxicRainTime = now + 25000 + Math.random() * 25000;
             return; 
         }}
 
-        // Movimiento de fauna marina y vejez
+        // Ciclo biológico y mareas de los bultos
         for (let i = objects.length - 1; i >= 0; i--) {{
             let obj = objects[i];
 
-            // Envejecimiento tras 1 minuto exacto
+            // Muerte por envejecimiento tras 1 min de vida
             if (obj.type === TYPES.JUAN && (now - obj.spawnTime) > 60000) {{
                 objects.splice(i, 1);
                 if(objects.length < 5) spawnObject();
@@ -963,24 +1009,23 @@ html_pesca = f"""
             obj.phase += obj.depthSpeed;
             obj.y = obj.baseY + Math.sin(obj.phase) * obj.depthAmp;
             if (obj.y < 185) obj.y = 185;
-            if (obj.y > height - 20) obj.y = height - 20;
+            if (obj.y > height - 25) obj.y = height - 25;
         }}
 
-        // Simulación del Anzuelo
+        // Viaje de la caña / Anzuelo
         if (inputState === 'launching') {{
             let dx = hook.targetX - hook.x;
             let dy = hook.targetY - hook.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
 
-            if (dist > 12) {{
-                hook.x += (dx / dist) * 12;
-                hook.y += (dy / dist) * 12;
+            if (dist > 14) {{
+                hook.x += (dx / dist) * 14;
+                hook.y += (dy / dist) * 14;
             }} else {{
                 let targetHit = null; let hitIndex = -1;
                 for(let i=0; i<objects.length; i++) {{
                     let o = objects[i];
                     let odx = hook.x - o.x; let ody = hook.y - o.y;
-                    // Colisión ajustada al nuevo radio masivo
                     if (Math.sqrt(odx*odx + ody*ody) < o.size) {{
                         targetHit = o; hitIndex = i; break;
                     }}
@@ -995,8 +1040,8 @@ html_pesca = f"""
         }} else if (inputState === 'returning') {{
             let dx = (width/2) - hook.x; let dy = 135 - hook.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist > 15) {{
-                hook.x += (dx / dist) * 16; hook.y += (dy / dist) * 16;
+            if (dist > 18) {{
+                hook.x += (dx / dist) * 18; hook.y += (dy / dist) * 18;
             }} else {{
                 inputState = 'angle';
             }}
@@ -1014,21 +1059,22 @@ html_pesca = f"""
                 isGameOver = true;
                 setTimeout(win, 100);
             }} else {{
-                triggerGiantAlert("👤 ¡JUAN CAZADO!\\n+1 Punto para el marcador", "#2ecc71");
+                triggerGiantAlert("👤 ¡JUAN CAPTURADO!\\n+1 Al marcador", "#2ecc71");
             }}
         }} else if (obj.type === TYPES.CARD) {{
             nPenalties++;
             penaltyTime = Date.now() + (4 + nPenalties) * 1000;
-            triggerGiantAlert("🟥 ¡TARJETA ROJA!\\nPenalización e inmovilización", "#ff4444");
+            triggerGiantAlert("🟥 ¡TARJETA ROJA!\\nPenalización temporal activada", "#ff4444");
         }} else {{
-            triggerGiantAlert("⚽ ¡PELOTA DE FÚTBOL!\\nNo suma nada al saco", "#3498db");
+            triggerGiantAlert("⚽ ¡PELOTA DE FÚTBOL!\\nBulto fallido, sigue buscando", "#3498db");
         }}
     }}
 
     function win() {{
+        if (document.fullscreenElement) document.exitFullscreen();
         const finalTime = (accumulatedTime / 1000).toFixed(2);
         winScreen.style.display = 'block';
-        document.getElementById('final-time-text').innerText = "¡Has completado el ecosistema en " + finalTime + "s!";
+        document.getElementById('final-time-text').innerText = "¡Has completado el reto en " + finalTime + "s!";
         document.getElementById('save-pesca-btn').onclick = () => {{
             let parentUrl = document.referrer.split('?')[0]; 
             window.open(parentUrl + '?game_pesca_score=' + finalTime, '_blank');
@@ -1036,51 +1082,47 @@ html_pesca = f"""
     }}
 
     function draw() {{
-        // Descontar la pausa para que las animaciones visuales fluidas sigan corriendo si se desea
         update(); 
 
         ctx.clearRect(0, 0, width, height);
 
-        // Control visual de gotas de lluvia tóxica
+        // Generar gotas si llueve de manera ácida
         if (isRainingVisual) {{
             if (Date.now() > rainVisualEnd) isRainingVisual = false;
-            if (rainDrops.length < 40) {{
-                rainDrops.push({{ x: Math.random() * width, y: 0, speed: 8 + Math.random() * 6, len: 15 + Math.random() * 10 }});
+            if (rainDrops.length < 50) {{
+                rainDrops.push({{ x: Math.random() * width, y: 0, speed: 9 + Math.random() * 5, len: 15 + Math.random() * 12 }});
             }}
         }}
 
-        // Render de lluvia ácida
+        // Renderizado de la tormenta verde ácida
         for (let r = rainDrops.length - 1; r >= 0; r--) {{
             let drop = rainDrops[r];
-            ctx.strokeStyle = '#39ff14'; // Verde radiactivo fosforito
+            ctx.strokeStyle = '#39ff14'; 
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.moveTo(drop.x, drop.y);
             ctx.lineTo(drop.x + 1, drop.y + drop.len);
             ctx.stroke();
             
-            // Si el juego no está congelado, mover la lluvia
-            if (Date.now() >= globalPauseUntil) {{
-                drop.y += drop.speed;
-            }}
+            if (Date.now() >= globalPauseUntil) drop.y += drop.speed;
             if (drop.y > height) rainDrops.splice(r, 1);
         }}
 
-        // Dibujar bultos GIGANTES (Fácil de pescar)
+        // Dibujar bultos colosales
         objects.forEach(obj => {{
             ctx.beginPath();
             ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI*2);
-            ctx.fillStyle = 'rgba(24, 48, 89, 0.85)';
+            ctx.fillStyle = 'rgba(24, 48, 89, 0.88)';
             ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = 2;
             ctx.stroke();
             ctx.fillStyle = '#fff';
-            ctx.font = "bold 16px sans-serif"; // Letra del bulto proporcional
+            ctx.font = "bold 16px sans-serif";
             ctx.fillText("❓", obj.x - 7, obj.y + 6);
         }});
 
-        // Estructuras de pesca
+        // Pescador y muelle
         ctx.fillStyle = '#5c3a21'; ctx.fillRect(width/2 - 35, 135, 70, 15);
         if (imageLoaded) {{
             ctx.drawImage(juanImg, width/2 - 25, 75, 50, 65);
@@ -1108,7 +1150,7 @@ html_pesca = f"""
             ctx.strokeStyle = '#fff'; ctx.strokeRect(width/2 - 50, 15, 100, 8);
         }}
 
-        // Línea física de pesca
+        // Sedal del anzuelo
         if (inputState === 'launching' || inputState === 'returning') {{
             ctx.beginPath();
             ctx.moveTo(width/2, 110);
@@ -1153,9 +1195,10 @@ html_pesca = f"""
         }}
     }}
 
-    window.addEventListener('mousedown', (e) => {{ if(e.target.id !== 'save-pesca-btn') handleActionStart(); }});
+    // Listeners
+    container.addEventListener('mousedown', (e) => {{ if(e.target.id !== 'fullscreen-btn') handleActionStart(); }});
     window.addEventListener('mouseup', handleActionEnd);
-    window.addEventListener('touchstart', (e) => {{ if(e.target.id !== 'save-pesca-btn') handleActionStart(); }});
+    container.addEventListener('touchstart', (e) => {{ if(e.target.id !== 'fullscreen-btn') handleActionStart(); }}, {{passive: true}});
     window.addEventListener('touchend', handleActionEnd);
     window.addEventListener('keydown', (e) => {{ if(e.code === 'Space') {{ e.preventDefault(); handleActionStart(); }} }});
     window.addEventListener('keyup', (e) => {{ if(e.code === 'Space') handleActionEnd(); }});
@@ -1167,27 +1210,3 @@ html_pesca = f"""
 """
 
 components.html(html_pesca, height=520)
-
-
-# ==============================================================================
-# --- 🛠️ RECEPCIÓN DE MARCADORES AUTOMÁTICOS ---
-# ==============================================================================
-st.markdown("### 💾 Guardar Récord del Océano")
-
-tiempo_pesca_detectado = st.query_params.get("game_pesca_score")
-
-if tiempo_pesca_detectado is not None:
-    st.info(f"🎯 **¡Gran jornada marinera!** Has parado el crono en: **{tiempo_pesca_detectado} segundos**")
-    with st.form("guardar_record_pesca_cinematic", clear_on_submit=True):
-        jugador_seleccionado = st.selectbox("Selecciona tu nombre:", JUGADORES_BASE, key="pesca_user_cinematic")
-        submit_record = st.form_submit_button("🥇 Inmortalizar Tiempo de Pesca")
-        
-        if submit_record and jugador_seleccionado:
-            hora_actual = datetime.now().strftime("%H:%M")
-            nombre_registro = f"{jugador_seleccionado} (Pesca: {tiempo_pesca_detectado}s a las {hora_actual})"
-            guardar_ganador(nombre_registro)
-            st.success("¡Tiempo guardado!")
-            st.query_params.clear()
-            st.rerun()
-else:
-    st.caption("🏃‍♂️ Ajusta el radar superior. Los bultos gigantes facilitan pescar, pero ten cuidado con las tormentas radiactivas que congelan tu avance.")

@@ -728,7 +728,7 @@ else:
 
 
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (LLUVIA ÁCIDA 50% Y OLEAJE REDUCIDO) -------
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (CORRECCIÓN TOTAL DEL FULLSCREEN) ---------
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎣 Minijuego: La Pesca de Juan")
@@ -859,7 +859,6 @@ html_pesca = f"""
     let waves = []; 
     let nextWaveSpawn = 0;
 
-    // Control de Lluvia Ácida
     let acidRainActive = false;
     let nextAcidEvent = Date.now() + 25000; 
     let acidEndTime = 0;
@@ -890,7 +889,6 @@ html_pesca = f"""
         if (currentCardsPct < 0.20) allowedTypes.push(TYPES.CARD);
 
         let type = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
-        let seaTop = height * 0.35; if (seaTop < 180) seaTop = 180; 
 
         let isDiscovered = Math.random() < 0.80;
         let assignJuanin = false;
@@ -900,10 +898,13 @@ html_pesca = f"""
 
         let maxLifeTime = 25000 + Math.random() * 15000;
 
+        // SOLUCIÓN: Usar porcentaje de profundidad (entre el 45% y el 90% del alto total) para que no floten en el cielo
+        let randomDepthPct = 0.45 + Math.random() * 0.45;
+
         objects.push({{
             id: Math.random().toString(36),
             x: Math.random() * width,
-            baseY: seaTop + 40 + Math.random() * (height - seaTop - 80),
+            depthPercent: randomDepthPct,
             y: 0, type: type, isJuanin: assignJuanin,
             vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 8.0 : 4.5), ax: 0,
             depthSpeed: 0.02 + Math.random() * 0.03, depthAmp: 8 + Math.random() * 18, phase: Math.random() * Math.PI * 2,
@@ -920,19 +921,16 @@ html_pesca = f"""
 
     function triggerAcidRainStrike() {{
         acidRainActive = true;
-        acidEndTime = Date.now() + 6000; // Tormenta visual de 6 segundos
+        acidEndTime = Date.now() + 6000; 
         acidIndicator.style.display = 'inline';
         
-        // CORRECCIÓN: Seleccionar exactamente el 50% de bultos aleatorios y eliminarlos
         if (objects.length > 0) {{
             let countToKill = Math.floor(objects.length * 0.5);
-            // Mezclamos el array de forma aleatoria
             objects.sort(() => Math.random() - 0.5);
-            // Eliminamos los primeros N elementos correspondientes al 50%
             objects.splice(0, countToKill);
         }}
         
-        triggerGiantAlert("🌧️ ¡LLUVIA ÁCIDA COLOOSAL!\\nEl 50% de los bultos marinos han sido disueltos.", "#2ecc71");
+        triggerGiantAlert("🌧️ ¡LLUVIA ÁCIDA COLOSAL!\\nEl 50% de los bultos marinos han sido disueltos.", "#2ecc71");
     }}
 
     function update() {{
@@ -944,7 +942,6 @@ html_pesca = f"""
 
         let seaTopBoundary = height * 0.35; if(seaTopBoundary < 180) seaTopBoundary = 180;
 
-        // Gestión del disparador de Lluvia Ácida
         if (!acidRainActive && now > nextAcidEvent) {{
             triggerAcidRainStrike();
         }}
@@ -961,7 +958,6 @@ html_pesca = f"""
             if (acidDrops[d].y > height) acidDrops.splice(d, 1);
         }}
 
-        // Movimiento del Juanprona
         if (heli.active) {{
             if (now > heli.nextChange) {{
                 heli.vx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 5);
@@ -972,7 +968,6 @@ html_pesca = f"""
             if (heli.x > width - 40) {{ heli.x = width - 40; heli.vx *= -1; }}
         }}
 
-        // Despliegue de patera
         if (!patera.active && now > patera.spawnTimer) {{
             patera.active = true;
             patera.y = seaTopBoundary - 8;
@@ -980,22 +975,20 @@ html_pesca = f"""
             nextWaveSpawn = now + 1000; 
             
             if (Math.random() > 0.5) {{
-                patera.x = -45; patera.startX = -45; patera.baseVx = 0.28; 
+                patera.x = -45; patera.startX = -45; patera.baseVx = 0.55; 
                 patera.direction = 'left'; 
                 angleParam = Math.PI * 1.2; 
             }} else {{
-                patera.x = width + 45; patera.startX = width + 45; patera.baseVx = -0.28; 
+                patera.x = width + 45; patera.startX = width + 45; patera.baseVx = -0.55; 
                 patera.direction = 'right'; 
                 angleParam = Math.PI * 1.7; 
             }}
             triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nAvance regular. Lanza el anzuelo arriba para crear olas.", "#f1c40f");
         }}
 
-        // Sistema de Olas menos frecuentes manteniendo el avance lineal rítmico
         if (patera.active && now >= globalPauseUntil) {{
             let center = width / 2;
 
-            // Olas mucho menos frecuentes (Cada 5.8 segundos)
             if (now > nextWaveSpawn) {{
                 waves.push({{ x: center, y: seaTopBoundary, vx: patera.direction === 'left' ? -1.4 : 1.4, size: 7 }});
                 nextWaveSpawn = now + 5800; 
@@ -1013,12 +1006,7 @@ html_pesca = f"""
                 if (wave.x < -60 || wave.x > width + 60) waves.splice(w, 1);
             }}
 
-            // RITMO DE AVANCE LINEAL ESTABLE MANTENIDO
-            let totalDistance = Math.abs(patera.startX - center);
-            let currentDistance = Math.abs(patera.x - center);
-            let closeness = 1 - (currentDistance / totalDistance);
-            let speedMultiplier = 1 + (closeness * 3.0); 
-            patera.x += patera.baseVx * speedMultiplier;
+            patera.x += patera.baseVx;
             
             if ((patera.baseVx > 0 && patera.x >= center) || (patera.baseVx < 0 && patera.x <= center)) {{
                 patera.active = false; waves = []; patera.spawnTimer = now + 45000; score = 0; scoreEl.innerText = score; 
@@ -1062,12 +1050,16 @@ html_pesca = f"""
             nextSpawnTime = now + 3500;
         }}
 
-        // Actualización de movimiento y vejez pasiva regular
+        // Recálculo dinámico basado en altura relativa real
         for (let i = objects.length - 1; i >= 0; i--) {{
             let obj = objects[i];
             obj.x += obj.vx;
             if (obj.x < 0 || obj.x > width) obj.vx *= -1;
-            obj.phase += obj.depthSpeed; obj.y = obj.baseY + Math.sin(obj.phase) * obj.depthAmp;
+            
+            // Reajuste de la y basado en el porcentaje de altura dinámico de la pantalla
+            let calculatedBaseY = height * obj.depthPercent;
+            obj.phase += obj.depthSpeed; 
+            obj.y = calculatedBaseY + Math.sin(obj.phase) * obj.depthAmp;
 
             if (now > obj.deathTime) {{
                 objects.splice(i, 1);

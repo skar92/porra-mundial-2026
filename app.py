@@ -730,16 +730,17 @@ else:
 import streamlit as st
 import streamlit.components.v1 as components
 
+import streamlit as st
+import streamlit.components.v1 as components
+
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (CON DETENCIÓN DE 60S) --------------------
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (JUANPRONA REPLEGADO 60S + 50% VISIBLES) --
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎣 Minijuego: La Pesca de Juan")
 
 img_base64_pesca = img_base64  # Asegúrate de tener definida esta variable previamente
 
-# SOLUCCIÓN AL SYNTAXERROR: Usamos un string normal sin la 'f' al inicio 
-# e inyectamos la imagen reemplazando un token único para evitar conflictos con las llaves de JS/CSS.
 html_pesca_template = """
 <!DOCTYPE html>
 <html>
@@ -854,7 +855,8 @@ html_pesca_template = """
     let angleSpeed = 0.035; 
     let fixedAngle = 0; let chargeForce = 0;
     
-    let heli = { x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, returnTime: 0 };
+    // El JUANPRONA tiene un temporizador para volver a activarse
+    let heli = { x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, reactiveTime: 0 };
     
     let patera = { 
         active: false, x: 0, y: 0, startX: 0, baseVx: 0, maxVx: 1.2,
@@ -904,6 +906,7 @@ html_pesca_template = """
             }
         }
 
+        // Por defecto nacen con probabilidad 50%
         let isDiscovered = Math.random() >= 0.50; 
         let maxLifeTime = 25000 + Math.random() * 15000;
         let randomDepthPct = 0.45 + Math.random() * 0.45;
@@ -963,6 +966,12 @@ html_pesca_template = """
         for (let d = acidDrops.length - 1; d >= 0; d--) {
             acidDrops[d].y += acidDrops[d].speed;
             if (acidDrops[d].y > height) acidDrops.splice(d, 1);
+        }
+
+        // CONTROL DEL JUANPRONA: Si está inactivo y pasó su tregua de 60s, vuelve
+        if (!heli.active && now > heli.reactiveTime) {
+            heli.active = true;
+            heli.x = 100;
         }
 
         if (heli.active) {
@@ -1062,6 +1071,7 @@ html_pesca_template = """
             nextSpawnTime = now + 3500;
         }
 
+        // --- REGLAS ESTRICTAS DE PROPORCIONES ---
         let totalJuanesTarget = Math.round(objects.length * 0.30);
         let currentJuanes = countType(TYPES.JUAN);
         
@@ -1093,6 +1103,20 @@ html_pesca_template = """
                     j.isJuanin = false;
                     actualJuanines--;
                     if (actualJuanines <= expectedJuanines) break;
+                }
+            }
+        }
+
+        // CORRECCIÓN: Como mínimo el 50% de bultos descubiertos siempre
+        let totalDiscovered = objects.filter(o => o.discovered).length;
+        let minimumRequired = Math.ceil(objects.length * 0.50);
+
+        if (totalDiscovered < minimumRequired) {
+            for (let o of objects) {
+                if (!o.discovered) {
+                    o.discovered = true;
+                    totalDiscovered++;
+                    if (totalDiscovered >= minimumRequired) break;
                 }
             }
         }
@@ -1145,16 +1169,21 @@ html_pesca_template = """
         }
     }
 
+    // CORRECCIÓN: El JUANPRONA se retira de la pantalla durante los 60s de la tramitación
     function processPateraCatch() {
         patera.active = false; 
         waves = []; 
         patera.spawnTimer = Date.now() + 60000; 
+        
+        heli.active = false; // El helicóptero se va
+        heli.reactiveTime = Date.now() + 60000; // Volverá en 60 segundos exactos
+        
         inputState = 'returning';
         
         score = score === 0 ? 2 : score * 2; 
         scoreEl.innerText = score;
         
-        triggerGiantAlert("🚔 ¡PATERA DETECTADA POR EL JUANPRONA!\\nTramitando detención. Puntos DUPLICADOS (" + score + " PTS) y 60s de tregua marina.", "#3498db");
+        triggerGiantAlert("🚔 ¡EL JUANPRONA SE LLEVA LA PATERA!\\nTramitando la detención en comisaría. Puntos DUPLICADOS (" + score + " PTS) y 60s de tregua total sin radar ni pateras.", "#3498db");
         if (score >= 10) { isGameOver = true; setTimeout(win, 100); }
     }
 
@@ -1213,6 +1242,7 @@ html_pesca_template = """
             ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(wave.x, wave.y + 4, wave.size, Math.PI, 0, false); ctx.stroke();
         });
 
+        // Solo dibuja el helicóptero si está activo en pantalla
         if (heli.active) {
             ctx.fillStyle = 'rgba(255, 235, 59, 0.14)'; ctx.beginPath(); ctx.moveTo(heli.x, heli.y + 10);
             ctx.lineTo(heli.x - heli.radarWidth, seaLine); ctx.lineTo(heli.x + heli.radarWidth, seaLine); ctx.closePath(); ctx.fill();
@@ -1324,7 +1354,5 @@ html_pesca_template = """
 </html>
 """
 
-# Reemplazamos la variable de forma segura con .replace() para que Python no se confunda
 html_pesca = html_pesca_template.replace("{{JUAN_IMAGE_BASE64}}", img_base64_pesca)
-
 components.html(html_pesca, height=520)

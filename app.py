@@ -730,6 +730,9 @@ else:
 import streamlit as st
 import streamlit.components.v1 as components
 
+import streamlit as st
+import streamlit.components.v1 as components
+
 # ==============================================================================
 # --- 🎣 MINIJUEGO: LA PESCA DE JUAN (CORRECCIÓN TOTAL DEL FULLSCREEN) ---------
 # ==============================================================================
@@ -855,7 +858,7 @@ html_pesca = f"""
     let heli = {{ x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, returnTime: 0 }};
     
     let patera = {{ 
-        active: false, x: 0, y: 0, startX: 0, baseVx: 0, maxVx: 2.2,
+        active: false, x: 0, y: 0, startX: 0, baseVx: 0, maxVx: 1.2, // maxVx suavizado a 1.2
         spawnTimer: Date.now() + 15000, direction: 'right',
         hitFlash: 0 
     }};
@@ -897,13 +900,13 @@ html_pesca = f"""
         let assignJuanin = false;
         if (type === TYPES.JUAN) {{
             let currentJuanines = countJuanines();
-            // Control estricto: El 70% de todos los Juanes debe ser un Juanin
             if (currentJuanines < Math.round((currentJuanes + 1) * 0.70)) {{
                 assignJuanin = true;
             }}
         }}
 
-        let isDiscovered = Math.random() < 0.80;
+        // CORRECCIÓN: Exactamente el 50% de bultos ocultos (discovered = true significa visible)
+        let isDiscovered = Math.random() >= 0.50; 
         let maxLifeTime = 25000 + Math.random() * 15000;
         let randomDepthPct = 0.45 + Math.random() * 0.45;
 
@@ -989,7 +992,7 @@ html_pesca = f"""
                 patera.direction = 'right'; 
                 angleParam = Math.PI * 1.7; 
             }}
-            triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nVelocidad progresiva hacia el centro. ¡Frénala con olas!", "#f1c40f");
+            triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nVelocidad progresiva suave hacia el centro. ¡Frénala!", "#f1c40f");
         }}
 
         if (patera.active && now >= globalPauseUntil) {{
@@ -1012,12 +1015,11 @@ html_pesca = f"""
                 if (wave.x < -60 || wave.x > width + 60) waves.splice(w, 1);
             }}
 
-            // Aceleración lineal hacia el centro
+            // CORRECCIÓN: Aceleración lineal más lenta y controlada hacia el centro
             let distanceToCenter = Math.abs(center - patera.x);
             let maxDistance = Math.abs(center - patera.startX);
-            let progress = 1 - (distanceToCenter / maxDistance); // 0 en el spawn, 1 en el centro
+            let progress = 1 - (distanceToCenter / maxDistance); 
             
-            // Suavizado del progreso entre base y máxima velocidad
             let currentSpeed = patera.baseVx + (patera.maxVx * progress * Math.sign(patera.baseVx));
             patera.x += currentSpeed;
             
@@ -1063,11 +1065,10 @@ html_pesca = f"""
             nextSpawnTime = now + 3500;
         }}
 
-        // Garantizar proporciones dinámicas en tiempo de ejecución (por si borra la lluvia ácida)
+        // Forzar proporciones estables en ejecución
         let totalJuanesTarget = Math.round(objects.length * 0.30);
         let currentJuanes = countType(TYPES.JUAN);
         
-        // Si faltan Juanes en el ecosistema actual se fuerzan transformaciones controladas
         if (currentJuanes < totalJuanesTarget && objects.length > 0) {{
             for (let o of objects) {{
                 if (o.type !== TYPES.JUAN) {{
@@ -1078,7 +1079,6 @@ html_pesca = f"""
             }}
         }}
         
-        // Controlar que el 70% de esos Juanes mantengan la condición de "Juanin"
         let currentJuanesList = objects.filter(o => o.type === TYPES.JUAN);
         let expectedJuanines = Math.round(currentJuanesList.length * 0.70);
         let actualJuanines = countJuanines();

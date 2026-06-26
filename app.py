@@ -728,11 +728,10 @@ else:
 
 
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (CON VEJEZ, LLUVIA ÁCIDA Y AVANCE LINEAL) -
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (LLUVIA ÁCIDA 50% Y OLEAJE REDUCIDO) -------
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 Minijuego: La Pesca de Juan (Ecosistema Completo)")
-st.write("Cuidado: los Juanes ahora envejecen y mueren si no los pescas, y las tormentas de lluvia ácida pueden mermar la población.")
+st.subheader("🎣 Minijuego: La Pesca de Juan")
 
 img_base64_pesca = img_base64 
 
@@ -772,10 +771,13 @@ html_pesca = f"""
     <button id="fullscreen-btn">📱 FULLSCREEN</button>
 
     <div id="ui">
-        <div>👤 Puntos Juan: <span id="score">0</span> / 10 <span id="acid-indicator" style="color:#2ecc71; display:none;">⚠️ LLUVIA ÁCIDA</span></div>
+        <div style="color: #ffeb3b; font-size: 12px; margin-bottom: 4px; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px;">
+            🎮 <b>Muelle de Juan:</b> Pesca 10 Juanes. Evita tarjetas rojas. Usa las olas para frenar la patera. Ojo al radar del Juanprona.
+        </div>
+        <div>👤 Puntos Juan: <span id="score">0</span> / 10 <span id="acid-indicator" style="color:#2ecc71; font-weight:bold; display:none;">⚠️ LLUVIA ÁCIDA</span></div>
         <div>⏱️ Tiempo: <span id="clock">0.0</span>s</div>
         <div>🐟 Bultos: <span id="pop-count">0</span> / 20</div>
-        <div id="instruction-text" style="color: #ffeb3b; margin-top: 5px;">Toca para fijar el ÁNGULO</div>
+        <div id="instruction-text" style="color: #ffeb3b; margin-top: 2px;">Toca para fijar el ÁNGULO</div>
     </div>
     
     <div id="giant-alert"></div>
@@ -857,9 +859,9 @@ html_pesca = f"""
     let waves = []; 
     let nextWaveSpawn = 0;
 
-    // Variables de Lluvia Ácida
+    // Control de Lluvia Ácida
     let acidRainActive = false;
-    let nextAcidEvent = Date.now() + 20000; 
+    let nextAcidEvent = Date.now() + 25000; 
     let acidEndTime = 0;
     let acidDrops = [];
 
@@ -896,7 +898,6 @@ html_pesca = f"""
             if (countJuanines() / (currentJuanes.length + 1) < 0.20 || Math.random() < 0.20) assignJuanin = true;
         }}
 
-        // Tiempo de vida máximo para simular envejecimiento (vejez entre 25s y 40s)
         let maxLifeTime = 25000 + Math.random() * 15000;
 
         objects.push({{
@@ -908,15 +909,31 @@ html_pesca = f"""
             depthSpeed: 0.02 + Math.random() * 0.03, depthAmp: 8 + Math.random() * 18, phase: Math.random() * Math.PI * 2,
             spawnTime: Date.now(), discovered: isDiscovered,
             lastDirectionChange: Date.now(), changeInterval: 300 + Math.random() * 600,
-            maxLife: maxLifeTime,
             deathTime: Date.now() + maxLifeTime
         }});
     }}
 
-    for(let i=0; i<12; i++) spawnObject();
+    for(let i=12; i>0; i--) spawnObject();
     let nextSpawnTime = Date.now() + 4000;
 
     let hook = {{ x: 0, y: 0, vx: 0, vy: 0, mode: 'straight', targetX: 0, targetY: 0 }};
+
+    function triggerAcidRainStrike() {{
+        acidRainActive = true;
+        acidEndTime = Date.now() + 6000; // Tormenta visual de 6 segundos
+        acidIndicator.style.display = 'inline';
+        
+        // CORRECCIÓN: Seleccionar exactamente el 50% de bultos aleatorios y eliminarlos
+        if (objects.length > 0) {{
+            let countToKill = Math.floor(objects.length * 0.5);
+            // Mezclamos el array de forma aleatoria
+            objects.sort(() => Math.random() - 0.5);
+            // Eliminamos los primeros N elementos correspondientes al 50%
+            objects.splice(0, countToKill);
+        }}
+        
+        triggerGiantAlert("🌧️ ¡LLUVIA ÁCIDA COLOOSAL!\\nEl 50% de los bultos marinos han sido disueltos.", "#2ecc71");
+    }}
 
     function update() {{
         const now = Date.now();
@@ -927,32 +944,24 @@ html_pesca = f"""
 
         let seaTopBoundary = height * 0.35; if(seaTopBoundary < 180) seaTopBoundary = 180;
 
-        // --- SISTEMA DE LLUVIA ÁCIDA ---
+        // Gestión del disparador de Lluvia Ácida
         if (!acidRainActive && now > nextAcidEvent) {{
-            acidRainActive = true;
-            acidEndTime = now + 8000; // Dura 8 segundos
-            acidIndicator.style.display = 'inline';
-            triggerGiantAlert("🌧️ ¡ALERTA DE LLUVIA ÁCIDA!\\nEl ph del agua daña los bultos sumergidos", "#2ecc71");
+            triggerAcidRainStrike();
         }}
         if (acidRainActive && now > acidEndTime) {{
             acidRainActive = false;
             acidIndicator.style.display = 'none';
             nextAcidEvent = now + 25000 + Math.random() * 15000;
         }}
-        if (acidRainActive && Math.random() < 0.4) {{
-            acidDrops.push({{ x: Math.random() * width, y: 0, speed: 6 + Math.random() * 6 }});
+        if (acidRainActive && Math.random() < 0.5) {{
+            acidDrops.push({{ x: Math.random() * width, y: 0, speed: 7 + Math.random() * 5 }});
         }}
         for (let d = acidDrops.length - 1; d >= 0; d--) {{
             acidDrops[d].y += acidDrops[d].speed;
             if (acidDrops[d].y > height) acidDrops.splice(d, 1);
         }}
 
-        // Lógica del Juanprona
-        if (!heli.active && now > heli.returnTime) {{
-            heli.active = true;
-            triggerGiantAlert("🚁 EL JUANPRONA HA REGRESADO\\nPatrullas reanudadas", "#3498db");
-        }}
-
+        // Movimiento del Juanprona
         if (heli.active) {{
             if (now > heli.nextChange) {{
                 heli.vx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 5);
@@ -963,7 +972,7 @@ html_pesca = f"""
             if (heli.x > width - 40) {{ heli.x = width - 40; heli.vx *= -1; }}
         }}
 
-        // Activación de la Patera
+        // Despliegue de patera
         if (!patera.active && now > patera.spawnTimer) {{
             patera.active = true;
             patera.y = seaTopBoundary - 8;
@@ -979,16 +988,17 @@ html_pesca = f"""
                 patera.direction = 'right'; 
                 angleParam = Math.PI * 1.7; 
             }}
-            triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nSu avance inicial es lento y lineal. ¡Usa las olas!", "#f1c40f");
+            triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nAvance regular. Lanza el anzuelo arriba para crear olas.", "#f1c40f");
         }}
 
-        // Procesamiento de olas y patera
+        // Sistema de Olas menos frecuentes manteniendo el avance lineal rítmico
         if (patera.active && now >= globalPauseUntil) {{
             let center = width / 2;
 
+            // Olas mucho menos frecuentes (Cada 5.8 segundos)
             if (now > nextWaveSpawn) {{
                 waves.push({{ x: center, y: seaTopBoundary, vx: patera.direction === 'left' ? -1.4 : 1.4, size: 7 }});
-                nextWaveSpawn = now + 4800; 
+                nextWaveSpawn = now + 5800; 
             }}
 
             for (let w = waves.length - 1; w >= 0; w--) {{
@@ -1003,6 +1013,7 @@ html_pesca = f"""
                 if (wave.x < -60 || wave.x > width + 60) waves.splice(w, 1);
             }}
 
+            // RITMO DE AVANCE LINEAL ESTABLE MANTENIDO
             let totalDistance = Math.abs(patera.startX - center);
             let currentDistance = Math.abs(patera.x - center);
             let closeness = 1 - (currentDistance / totalDistance);
@@ -1048,30 +1059,22 @@ html_pesca = f"""
 
         if (now > nextSpawnTime) {{
             if(objects.length < 20) spawnObject();
-            nextSpawnTime = now + 4000;
+            nextSpawnTime = now + 3500;
         }}
 
-        // --- ACTUALIZACIÓN DE OBJETOS: MOVIMIENTO, VEJEZ Y DAÑO POR LLUVIA ---
+        // Actualización de movimiento y vejez pasiva regular
         for (let i = objects.length - 1; i >= 0; i--) {{
             let obj = objects[i];
             obj.x += obj.vx;
             if (obj.x < 0 || obj.x > width) obj.vx *= -1;
             obj.phase += obj.depthSpeed; obj.y = obj.baseY + Math.sin(obj.phase) * obj.depthAmp;
 
-            // 1. Efecto de la Lluvia Ácida (Acelera la muerte o los disuelve)
-            if (acidRainActive) {{
-                obj.deathTime -= 15; // Desgaste de salud/tiempo ambiental
-            }}
-
-            // 2. Control de Muerte por Vejez / Corrosión
             if (now > obj.deathTime) {{
                 objects.splice(i, 1);
-                spawnObject(); // Repoblar automáticamente el mar
-                continue;
+                spawnObject();
             }}
         }}
 
-        // Lanzamiento de anzuelo
         if (inputState === 'launching') {{
             if (hook.mode === 'parabolic') {{
                 hook.x += hook.vx; hook.vy += 0.42; hook.y += hook.vy;
@@ -1108,8 +1111,7 @@ html_pesca = f"""
     function processPateraCatch() {{
         patera.active = false; waves = []; patera.spawnTimer = Date.now() + 45000; inputState = 'returning';
         score = score === 0 ? 2 : score * 2; scoreEl.innerText = score;
-        heli.active = false; heli.returnTime = Date.now() + 120000;
-        triggerGiantAlert("🤝 ¡PATERA ELIMINADA!\\nPuntos DUPLICADOS (" + score + " PTS). Cielos despejados.", "#2ecc71");
+        triggerGiantAlert("🤝 ¡PATERA ELIMINADA!\\nPuntos DUPLICADOS (" + score + " PTS).", "#2ecc71");
         if (score >= 10) {{ isGameOver = true; setTimeout(win, 100); }}
     }}
 
@@ -1121,10 +1123,10 @@ html_pesca = f"""
                 if (heli.active && width/2 >= xMinRadar && width/2 <= xMaxRadar) {{
                     let perdidos = Math.floor(score * 0.75); score -= perdidos; if (score < 0) score = 0;
                     scoreEl.innerText = score;
-                    triggerGiantAlert("🚨 ¡MULTAZO DEL JUANPRONA!\\nJuanín inmaduro detectado bajo el foco. -75%", "#e74c3c");
+                    triggerGiantAlert("🚨 ¡MULTAZO DEL JUANPRONA!\\nTe multan por un Juanín bajo el foco radar. -75%", "#e74c3c");
                 }} else {{
                     score += 2; scoreEl.innerText = score;
-                    triggerGiantAlert("👶 ¡JUANÍN EXTRAÍDO!\\nFurtivo total, +2 Puntos", "#f39c12");
+                    triggerGiantAlert("👶 ¡JUANÍN EXTRAÍDO!\\nFurtivo absoluto, +2 Puntos", "#f39c12");
                 }}
             }} else {{
                 score++; scoreEl.innerText = score;
@@ -1148,26 +1150,23 @@ html_pesca = f"""
         update(); ctx.clearRect(0, 0, width, height);
         let seaLine = height * 0.35; if(seaLine < 180) seaLine = 180;
 
-        // Si hay lluvia ácida, el cielo cambia a un tono verdoso insalubre
-        ctx.fillStyle = acidRainActive ? '#556b2f' : '#70b5d3'; 
+        ctx.fillStyle = acidRainActive ? '#4d603a' : '#70b5d3'; 
         ctx.fillRect(0, 0, width, seaLine);
         
         let seaGrad = ctx.createLinearGradient(0, seaLine, 0, height);
-        seaGrad.addColorStop(0, acidRainActive ? '#0f3817' : '#1E90FF');
+        seaGrad.addColorStop(0, acidRainActive ? '#0e2b14' : '#1E90FF');
         seaGrad.addColorStop(1, '#051937');
         ctx.fillStyle = seaGrad; ctx.fillRect(0, seaLine, width, height - seaLine);
 
-        // Dibujar gotas de lluvia ácida
         if (acidRainActive) {{
-            ctx.strokeStyle = 'rgba(173, 255, 47, 0.4)'; ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(150, 240, 50, 0.4)'; ctx.lineWidth = 1.5;
             acidDrops.forEach(d => {{
-                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - 1, d.y + 8); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x - 1, d.y + 9); ctx.stroke();
             }});
         }}
 
-        // Render de olas
         waves.forEach(wave => {{
-            ctx.strokeStyle = acidRainActive ? 'rgba(173, 255, 47, 0.6)' : 'rgba(255, 255, 255, 0.75)';
+            ctx.strokeStyle = acidRainActive ? 'rgba(150, 240, 50, 0.5)' : 'rgba(255, 255, 255, 0.75)';
             ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(wave.x, wave.y + 4, wave.size, Math.PI, 0, false); ctx.stroke();
         }});
 
@@ -1185,21 +1184,17 @@ html_pesca = f"""
             ctx.lineTo(patera.x + 14, patera.y + 14); ctx.lineTo(patera.x - 14, patera.y + 14); ctx.closePath(); ctx.fill();
         }}
 
-        // Render de Objetos Submarinos con indicador visual de envejecimiento
         objects.forEach(obj => {{
             let renderSize = obj.discovered ? (obj.isJuanin ? 15 : 28) : 28;
             let lifeLeft = obj.deathTime - Date.now();
-            
             ctx.beginPath(); ctx.arc(obj.x, obj.y, renderSize, 0, Math.PI*2);
             
-            // Si le queda menos de 5 segundos de vida, parpadea en gris por vejez
             if (lifeLeft < 5000 && Math.floor(Date.now() / 250) % 2 === 0) {{
-                ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
+                ctx.fillStyle = 'rgba(110, 110, 110, 0.6)';
             }} else {{
                 ctx.fillStyle = obj.discovered ? 'rgba(30, 85, 145, 0.9)' : 'rgba(24, 48, 89, 0.95)';
             }}
             ctx.fill();
-            
             ctx.strokeStyle = (obj.discovered && obj.isJuanin) ? '#ffeb3b' : 'rgba(255,255,255,0.4)';
             ctx.lineWidth = 1.5; ctx.stroke();
             

@@ -728,10 +728,10 @@ else:
 
 
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN EVENTOS CINEMÁTICOS) ---
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN  ---
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 Minijuego: La Pesca de Juan (Megabultos e Interrupciones)")
+st.subheader("🎣 La Pesca de Juan ")
 st.write("Pesca **10 Juanes**. Los bultos son gigantes, pero los eventos congelarán el océano.")
 
 img_base64_pesca = img_base64 

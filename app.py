@@ -726,12 +726,13 @@ else:
     st.caption("🏃‍♂️ Juega una partida. Al perder, pulsa el botón verde dentro del juego y este panel se activará solo con tus puntos.")
 
 
+
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (VERSIÓN CORREGIDA Y OPTIMIZADA) ---------
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (FÍSICA PARABÓLICA Y RADAR CORREGIDO) ----
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 Minijuego: La Pesca de Juan (Versión Estable)")
-st.write("¡Solucionado! El ecosistema ya está activo. Calcula las trayectorias y vigila la patera.")
+st.subheader("🎣 Minijuego: La Pesca de Juan (Mecánica Parabólica Arreglada)")
+st.write("¡Solucionado! Ahora la aguja rota de forma fluida y el tiro parabólico hacia el cielo funciona a la perfección.")
 
 img_base64_pesca = img_base64 
 
@@ -840,15 +841,14 @@ html_pesca = f"""
     let penaltyTime = 0; let nPenalties = 0;
     let globalPauseUntil = 0;
 
+    // Estados del Radar e Inputs
     let inputState = 'angle'; 
-    let angleParam = 0; let angleSpeed = 0.04; 
+    let angleParam = 0.5; // Comienza mirando abajo-derecha
+    let angleSpeed = 0.035; 
     let fixedAngle = 0; let chargeForce = 0;
     
     let heli = {{ x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, returnTime: 0 }};
     let patera = {{ active: false, x: 0, y: 0, startX: 0, baseVx: 0, sizeW: 45, sizeH: 22, spawnTimer: Date.now() + 55000 }};
-
-    let rainDrops = [];
-    let isRainingVisual = false; let rainVisualEnd = 0;
 
     function triggerGiantAlert(message, borderColor = '#ffeb3b') {{
         giantAlert.innerHTML = message.replace(/\\n/g, "<br>");
@@ -898,7 +898,7 @@ html_pesca = f"""
     for(let i=0; i<12; i++) spawnObject();
     let nextSpawnTime = Date.now() + 4000;
 
-    let hook = {{ x: 0, y: 0, vx: 0, vy: 0, mode: 'straight' }};
+    let hook = {{ x: 0, y: 0, vx: 0, vy: 0, mode: 'straight', targetX: 0, targetY: 0 }};
 
     function update() {{
         const now = Date.now();
@@ -906,6 +906,8 @@ html_pesca = f"""
         lastTimeCheck = now;
 
         if (isGameOver) return;
+
+        let seaTopBoundary = height * 0.35; if(seaTopBoundary < 180) seaTopBoundary = 180;
 
         if (!heli.active && now > heli.returnTime) {{
             heli.active = true;
@@ -922,29 +924,26 @@ html_pesca = f"""
             if (heli.x > width - 40) {{ heli.x = width - 40; heli.vx *= -1; }}
         }}
 
-        // Temporizador de Patera Corregido
+        // Aparición de Patera
         if (!patera.active && now > patera.spawnTimer) {{
             patera.active = true;
-            let seaLine = height * 0.35; if(seaLine < 180) seaLine = 180;
-            patera.y = seaLine - 8;
-            
+            patera.y = seaTopBoundary - 8;
             if (Math.random() > 0.5) {{
-                patera.x = -50; patera.startX = -50; patera.baseVx = 0.3;
+                patera.x = -50; patera.startX = -50; patera.baseVx = 0.35;
             }} else {{
-                patera.x = width + 50; patera.startX = width + 50; patera.baseVx = -0.3;
+                patera.x = width + 50; patera.startX = width + 50; patera.baseVx = -0.35;
             }}
-            triggerGiantAlert("⛵ ¡ALERTA: PATERA DETECTADA!\\nInicia muy lento, pero acelerará al acercarse. ¡Frénala!", "#f1c40f");
+            triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nAcelera al acercarse. ¡Apunta ARRIBA para destruirla!", "#f1c40f");
         }}
 
+        // Lógica de avance de patera
         if (patera.active && now >= globalPauseUntil) {{
             let center = width / 2;
             let totalDistance = Math.abs(patera.startX - center);
             let currentDistance = Math.abs(patera.x - center);
             let closeness = 1 - (currentDistance / totalDistance);
-            let speedMultiplier = 1 + (Math.pow(closeness, 2.5) * 11.5);
-            let currentVx = patera.baseVx * speedMultiplier;
-            
-            patera.x += currentVx;
+            let speedMultiplier = 1 + (Math.pow(closeness, 2.2) * 12);
+            patera.x += patera.baseVx * speedMultiplier;
             
             if ((patera.baseVx > 0 && patera.x >= center) || (patera.baseVx < 0 && patera.x <= center)) {{
                 patera.active = false;
@@ -965,14 +964,23 @@ html_pesca = f"""
         clockEl.innerText = (accumulatedTime / 1000).toFixed(1);
         popEl.innerText = objects.length;
 
+        // CORRECCIÓN DEL RADAR MIXTO: Control matemático estricto de oscilación por cuadrantes
         if (inputState === 'angle') {{
             angleParam += angleSpeed;
-            let limitMax = patera.active ? Math.PI * 2 : Math.PI;
-            if (angleParam > limitMax || angleParam < 0) angleSpeed *= -1;
-            insText.innerText = patera.active ? "Apunta ARRIBA para tiro parabólico" : "Toca para fijar ÁNGULO";
+            if (patera.active) {{
+                // Si hay patera, la aguja limpia un arco completo continuo (De 0 a PI es mar, de PI a 2PI es cielo)
+                if (angleParam > Math.PI * 2) angleParam = 0;
+                insText.innerText = (angleParam > Math.PI) ? "🎯 APUNTANDO AL CIELO (PARÁBOLA)" : "🎣 APUNTANDO AL MAR (RECTO)";
+            }} else {{
+                // Si no hay patera, se limita exclusivamente a la semicircunferencia marina inferior (0 a PI)
+                if (angleParam > Math.PI) {{ angleParam = Math.PI; angleSpeed *= -1; }}
+                if (angleParam < 0) {{ angleParam = 0; angleSpeed *= -1; }}
+                insText.innerText = "Toca para fijar ÁNGULO";
+            }}
         }}
+        
         if (inputState === 'force') {{
-            chargeForce = Math.min(chargeForce + 2.5, 100);
+            chargeForce = Math.min(chargeForce + 2.8, 100);
         }}
 
         if (now > nextSpawnTime) {{
@@ -980,8 +988,7 @@ html_pesca = f"""
             nextSpawnTime = now + 5000;
         }}
 
-        let seaTopBoundary = height * 0.35; if(seaTopBoundary < 180) seaTopBoundary = 180;
-
+        // Peces
         for (let i = objects.length - 1; i >= 0; i--) {{
             let obj = objects[i];
             if (now - obj.lastDirectionChange > obj.changeInterval) {{
@@ -996,16 +1003,30 @@ html_pesca = f"""
             if (obj.y > height - 25) obj.y = height - 25;
         }}
 
+        // CORRECCIÓN DE LANZAMIENTO Y FÍSICA PARABÓLICA
         if (inputState === 'launching') {{
             if (hook.mode === 'parabolic') {{
-                hook.x += hook.vx; hook.vy += 0.38; hook.y += hook.vy;
+                // Avanza usando vectores de velocidad con gravedad real simulada
+                hook.x += hook.vx;
+                hook.vy += 0.42; // Gravedad descendente
+                hook.y += hook.vy;
 
-                if (patera.active && hook.x > patera.x - 24 && hook.x < patera.x + 24 && hook.y > patera.y - 15 && hook.y < patera.y + 15) {{
-                    processPateraCatch(); return;
+                // Colisión contra la patera en el aire o superficie
+                if (patera.active && Math.abs(hook.x - patera.x) < 26 && Math.abs(hook.y - patera.y) < 18) {{
+                    processPateraCatch(); 
+                    return;
                 }}
-                if (hook.y >= seaTopBoundary) hook.mode = 'straight';
+                
+                // Si cruza la línea del mar, se frena y pasa a modo sumergido normal
+                if (hook.y >= seaTopBoundary) {{
+                    hook.mode = 'straight';
+                    hook.targetX = hook.x + hook.vx * 5;
+                    hook.targetY = height - 30;
+                }}
+                
                 if (hook.x < 0 || hook.x > width || hook.y > height) inputState = 'returning';
             }} else {{
+                // Lanzamiento rectilíneo estándar marino
                 let dx = hook.targetX - hook.x; let dy = hook.targetY - hook.y;
                 let dist = Math.sqrt(dx*dx + dy*dy);
                 if (dist > 18) {{
@@ -1024,10 +1045,16 @@ html_pesca = f"""
                 }}
             }}
         }} else if (inputState === 'returning') {{
+            // Retorno al muelle garantizado
             let dx = (width/2) - hook.x; let dy = (seaTopBoundary - 15) - hook.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist > 25) {{ hook.x += (dx / dist) * 25; hook.y += (dy / dist) * 25; }}
-            else {{ inputState = 'angle'; }}
+            if (dist > 25) {{ 
+                hook.x += (dx / dist) * 25; hook.y += (dy / dist) * 25; 
+            }} else {{ 
+                inputState = 'angle';
+                // Forzar que regrese al arco inferior para evitar bloqueos aéreos permanentes
+                if (angleParam > Math.PI) angleParam = 0.5; 
+            }}
         }}
     }}
 
@@ -1035,7 +1062,7 @@ html_pesca = f"""
         patera.active = false; patera.spawnTimer = Date.now() + 55000; inputState = 'returning';
         score = score === 0 ? 2 : score * 2; scoreEl.innerText = score;
         heli.active = false; heli.returnTime = Date.now() + 120000;
-        triggerGiantAlert("🤝 ¡GRACIAS DEL JUANPRONA!\\nPatera capturada en aproximación. Puntos DUPLICADOS (" + score + " PTS). Helicóptero retirado por 2 minutos.", "#2ecc71");
+        triggerGiantAlert("🤝 ¡INTERCEPCIÓN POR PARÁBOLA!\\nJUANPRONA agradece la captura. Juanes DUPLICADOS (" + score + " PTS). Helicóptero retirado por 2 min.", "#2ecc71");
         if (score >= 10) {{ isGameOver = true; setTimeout(win, 100); }}
     }}
 
@@ -1047,21 +1074,21 @@ html_pesca = f"""
                 if (heli.active && width/2 >= xMinRadar && width/2 <= xMaxRadar) {{
                     let perdidos = Math.floor(score * 0.75); score -= perdidos; if (score < 0) score = 0;
                     scoreEl.innerText = score;
-                    triggerGiantAlert("🚨 ¡MULTAZO DEL JUANPRONA!\\nTe han pillado con un Juanín inmaduro. Pierdes el 75% de tus puntos", "#e74c3c");
+                    triggerGiantAlert("🚨 ¡MULTAZO DEL JUANPRONA!\\nCaptura inmadura bajo el radar. Pierdes el 75% de tus Juanes", "#e74c3c");
                 }} else {{
                     score += 2; scoreEl.innerText = score;
-                    triggerGiantAlert("👶 ¡JUANÍN EXTRAÍDO CON ÉXITO!\\nGanancia furtiva sin radares de +2 Puntos", "#f39c12");
+                    triggerGiantAlert("👶 ¡JUANÍN FURTIVO EXTRAÍDO!\\nGanancia limpia de +2 Puntos", "#f39c12");
                 }}
             }} else {{
                 score++; scoreEl.innerText = score;
-                triggerGiantAlert("👤 ¡JUAN ADULTO CAPTURADO!\\n+1 Al casillero", "#2ecc71");
+                triggerGiantAlert("👤 ¡JUAN ADULTO CAPTURADO!\\n+1 Punto", "#2ecc71");
             }}
             if (score >= 10) {{ isGameOver = true; setTimeout(win, 100); }}
         }} else if (obj.type === TYPES.CARD) {{
             nPenalties++; let extraSeconds = 4 + nPenalties; accumulatedTime += (extraSeconds * 1000); 
             penaltyTime = Date.now() + (extraSeconds * 1000);
-            triggerGiantAlert("🟥 ¡TARJETA ROJA!\\n+" + extraSeconds + "s añadidos al cronómetro", "#ff4444");
-        }} else {{ triggerGiantAlert("⚽ ¡PELOTA DE FÚTBOL!\\nDesecho marino", "#3498db"); }}
+            triggerGiantAlert("🟥 ¡TARJETA ROJA!\\n+" + extraSeconds + "s de penalización", "#ff4444");
+        }} else {{ triggerGiantAlert("⚽ ¡PELOTA DE FÚTBOL!\\nDesecho marino sin valor", "#3498db"); }}
     }}
 
     function win() {{
@@ -1074,6 +1101,7 @@ html_pesca = f"""
         update(); ctx.clearRect(0, 0, width, height);
         let seaLine = height * 0.35; if(seaLine < 180) seaLine = 180;
 
+        // Escenario Cielo y Mar
         ctx.fillStyle = '#70b5d3'; ctx.fillRect(0, 0, width, seaLine);
         let seaGrad = ctx.createLinearGradient(0, seaLine, 0, height);
         seaGrad.addColorStop(0, '#1E90FF'); seaGrad.addColorStop(1, '#051937');
@@ -1092,18 +1120,16 @@ html_pesca = f"""
             ctx.moveTo(patera.x - 22, patera.y); ctx.lineTo(patera.x + 22, patera.y);
             ctx.lineTo(patera.x + 14, patera.y + 14); ctx.lineTo(patera.x - 14, patera.y + 14);
             ctx.closePath(); ctx.fill();
-            ctx.font = "12px sans-serif"; ctx.fillText("⛵ PATERA", patera.x - 24, patera.y - 6);
+            ctx.font = "12px sans-serif"; ctx.fillStyle = '#fff'; ctx.fillText("⛵ PATERA", patera.x - 24, patera.y - 6);
         }}
 
+        // Render de Bultos
         objects.forEach(obj => {{
             let renderSize = obj.discovered ? (obj.isJuanin ? 15 : 28) : 28;
-            ctx.beginPath();
-            ctx.arc(obj.x, obj.y, renderSize, 0, Math.PI*2);
-            ctx.fillStyle = obj.discovered ? 'rgba(30, 85, 145, 0.9)' : 'rgba(24, 48, 89, 0.95)';
-            ctx.fill();
+            ctx.beginPath(); ctx.arc(obj.x, obj.y, renderSize, 0, Math.PI*2);
+            ctx.fillStyle = obj.discovered ? 'rgba(30, 85, 145, 0.9)' : 'rgba(24, 48, 89, 0.95)'; ctx.fill();
             ctx.strokeStyle = (obj.discovered && obj.isJuanin) ? '#ffeb3b' : 'rgba(255,255,255,0.4)';
-            ctx.lineWidth = (obj.discovered && obj.isJuanin) ? 2.5 : 1.5;
-            ctx.stroke();
+            ctx.lineWidth = (obj.discovered && obj.isJuanin) ? 2.5 : 1.5; ctx.stroke();
             
             if (obj.discovered && imageLoaded && obj.type === TYPES.JUAN) {{
                 ctx.save(); ctx.beginPath(); ctx.arc(obj.x, obj.y, renderSize - 2, 0, Math.PI*2); ctx.clip();
@@ -1112,24 +1138,27 @@ html_pesca = f"""
                 ctx.fillStyle = '#fff'; ctx.font = "bold 16px sans-serif";
                 ctx.fillText(obj.type === TYPES.CARD ? '🟥' : '⚽', obj.x - 8, obj.y + 6);
             }} else {{
-                ctx.fillStyle = '#fff'; ctx.font = "bold 15px sans-serif";
-                ctx.fillText("❓", obj.x - 6, obj.y + 5);
+                ctx.fillStyle = '#fff'; ctx.font = "bold 15px sans-serif"; ctx.fillText("❓", obj.x - 6, obj.y + 5);
             }}
         }});
 
+        // Muelle de madera y Pescador
         ctx.fillStyle = '#5c3a21'; ctx.fillRect(width/2 - 35, seaLine - 15, 70, 15);
         if (imageLoaded) ctx.drawImage(juanImg, width/2 - 22, seaLine - 72, 44, 60);
 
-        let radarRadius = 50; let radarX = width/2; let radarY = seaLine;
+        // GUI DEL RADAR (Circunferencia Dinámica Inteligente)
+        let radarRadius = 55; let radarX = width/2; let radarY = seaLine - 15;
         ctx.beginPath();
+        // Muestra visualmente la circunferencia completa si la patera habilita el tiro parabólico hacia el cielo
         ctx.arc(radarX, radarY, radarRadius, 0, patera.active ? Math.PI*2 : Math.PI, false);
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2; ctx.stroke();
 
+        // Aguja indicadora
         let ballX = radarX + Math.cos(angleParam) * radarRadius;
         let ballY = radarY + Math.sin(angleParam) * radarRadius;
         ctx.beginPath(); ctx.moveTo(radarX, radarY); ctx.lineTo(ballX, ballY);
-        ctx.strokeStyle = '#ffeb3b'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.beginPath(); ctx.arc(ballX, ballY, 7, 0, Math.PI*2);
+        ctx.strokeStyle = '#ffeb3b'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(ballX, ballY, 6, 0, Math.PI*2);
         ctx.fillStyle = (inputState === 'angle') ? '#ffeb3b' : '#2ecc71'; ctx.fill();
 
         if (inputState === 'force') {{
@@ -1137,9 +1166,10 @@ html_pesca = f"""
             ctx.strokeStyle = '#fff'; ctx.strokeRect(width/2 - 50, seaLine - 110, 100, 10);
         }}
 
+        // Dibujo dinámico del sedal en vuelo
         if (inputState === 'launching' || inputState === 'returning') {{
             ctx.beginPath(); ctx.moveTo(width/2, seaLine - 15); ctx.lineTo(hook.x, hook.y);
-            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
             ctx.beginPath(); ctx.arc(hook.x, hook.y, 6, 0, Math.PI*2); ctx.fillStyle = '#e74c3c'; ctx.fill();
         }}
 
@@ -1156,14 +1186,20 @@ html_pesca = f"""
             inputState = 'launching';
             let seaLineBound = height * 0.35; if(seaLineBound < 180) seaLineBound = 180;
             
-            if (Math.sin(fixedAngle) < 0 && patera.active) {{
+            // CORRECCIÓN SISTEMA DE DISPARO MIXTO: Evaluar si apunta hacia el cielo o hacia el mar
+            if (angleParam > Math.PI && patera.active) {{
+                // DISPARO PARABÓLICO (HACIA ARRIBA)
                 hook.mode = 'parabolic';
-                let powerFactor = (chargeForce / 100) * 16;
-                hook.vx = Math.cos(fixedAngle) * powerFactor; hook.vy = Math.sin(fixedAngle) * powerFactor;
+                let initialVelocity = 4 + (chargeForce / 100) * 14; // Potencia modulada
+                hook.vx = Math.cos(fixedAngle) * initialVelocity;
+                hook.vy = Math.sin(fixedAngle) * initialVelocity; // Vector vertical real hacia el cielo
             }} else {{
+                // DISPARO MARINO RECTILÍNEO (HACIA ABAJO)
                 hook.mode = 'straight';
-                let maxReach = Math.sqrt((width/2)**2 + height**2) * 0.9;
+                let maxReach = Math.sqrt((width/2)**2 + height**2) * 0.95;
                 let currentReach = (chargeForce / 100) * maxReach;
+                
+                // Forzar el valor absoluto del seno para asegurar que descienda al mar
                 hook.targetX = (width/2) + Math.cos(fixedAngle) * currentReach;
                 hook.targetY = seaLineBound + Math.abs(Math.sin(fixedAngle) * currentReach);
                 

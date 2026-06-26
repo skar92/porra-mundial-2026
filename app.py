@@ -727,13 +727,16 @@ else:
 
 
 
+import streamlit as st
+import streamlit.components.v1 as components
+
 # ==============================================================================
 # --- 🎣 MINIJUEGO: LA PESCA DE JUAN (CORRECCIÓN TOTAL DEL FULLSCREEN) ---------
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎣 Minijuego: La Pesca de Juan")
 
-img_base64_pesca = img_base64 
+img_base64_pesca = img_base64  # Asegúrate de tener definida esta variable previamente
 
 html_pesca = f"""
 <!DOCTYPE html>
@@ -852,7 +855,7 @@ html_pesca = f"""
     let heli = {{ x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, returnTime: 0 }};
     
     let patera = {{ 
-        active: false, x: 0, y: 0, startX: 0, baseVx: 0, 
+        active: false, x: 0, y: 0, startX: 0, baseVx: 0, maxVx: 2.2,
         spawnTimer: Date.now() + 15000, direction: 'right',
         hitFlash: 0 
     }};
@@ -880,25 +883,28 @@ html_pesca = f"""
 
     function spawnObject() {{
         if (objects.length >= 20) return;
-        let currentJuanes = objects.filter(o => o.type === TYPES.JUAN);
-        let currentJuanesPct = objects.length > 0 ? currentJuanes.length / objects.length : 0;
-        let currentCardsPct = objects.length > 0 ? countType(TYPES.CARD) / objects.length : 0;
-
-        let allowedTypes = [TYPES.BALL];
-        if (currentJuanesPct < 0.20) allowedTypes.push(TYPES.JUAN);
-        if (currentCardsPct < 0.20) allowedTypes.push(TYPES.CARD);
-
-        let type = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
-
-        let isDiscovered = Math.random() < 0.80;
-        let assignJuanin = false;
-        if (type === TYPES.JUAN) {{
-            if (countJuanines() / (currentJuanes.length + 1) < 0.20 || Math.random() < 0.20) assignJuanin = true;
+        
+        let totalJuanesTarget = Math.round(objects.length * 0.30);
+        let currentJuanes = countType(TYPES.JUAN);
+        
+        let type;
+        if (currentJuanes < totalJuanesTarget || (objects.length === 0 && Math.random() < 0.30)) {{
+            type = TYPES.JUAN;
+        }} else {{
+            type = Math.random() < 0.5 ? TYPES.BALL : TYPES.CARD;
         }}
 
-        let maxLifeTime = 25000 + Math.random() * 15000;
+        let assignJuanin = false;
+        if (type === TYPES.JUAN) {{
+            let currentJuanines = countJuanines();
+            // Control estricto: El 70% de todos los Juanes debe ser un Juanin
+            if (currentJuanines < Math.round((currentJuanes + 1) * 0.70)) {{
+                assignJuanin = true;
+            }}
+        }}
 
-        // SOLUCIÓN: Usar porcentaje de profundidad (entre el 45% y el 90% del alto total) para que no floten en el cielo
+        let isDiscovered = Math.random() < 0.80;
+        let maxLifeTime = 25000 + Math.random() * 15000;
         let randomDepthPct = 0.45 + Math.random() * 0.45;
 
         objects.push({{
@@ -983,7 +989,7 @@ html_pesca = f"""
                 patera.direction = 'right'; 
                 angleParam = Math.PI * 1.7; 
             }}
-            triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nAvance regular. Lanza el anzuelo arriba para crear olas.", "#f1c40f");
+            triggerGiantAlert("⛵ ¡PATERA DETECTADA!\\nVelocidad progresiva hacia el centro. ¡Frénala con olas!", "#f1c40f");
         }}
 
         if (patera.active && now >= globalPauseUntil) {{
@@ -1006,7 +1012,14 @@ html_pesca = f"""
                 if (wave.x < -60 || wave.x > width + 60) waves.splice(w, 1);
             }}
 
-            patera.x += patera.baseVx;
+            // Aceleración lineal hacia el centro
+            let distanceToCenter = Math.abs(center - patera.x);
+            let maxDistance = Math.abs(center - patera.startX);
+            let progress = 1 - (distanceToCenter / maxDistance); // 0 en el spawn, 1 en el centro
+            
+            // Suavizado del progreso entre base y máxima velocidad
+            let currentSpeed = patera.baseVx + (patera.maxVx * progress * Math.sign(patera.baseVx));
+            patera.x += currentSpeed;
             
             if ((patera.baseVx > 0 && patera.x >= center) || (patera.baseVx < 0 && patera.x <= center)) {{
                 patera.active = false; waves = []; patera.spawnTimer = now + 45000; score = 0; scoreEl.innerText = score; 
@@ -1050,13 +1063,49 @@ html_pesca = f"""
             nextSpawnTime = now + 3500;
         }}
 
-        // Recálculo dinámico basado en altura relativa real
+        // Garantizar proporciones dinámicas en tiempo de ejecución (por si borra la lluvia ácida)
+        let totalJuanesTarget = Math.round(objects.length * 0.30);
+        let currentJuanes = countType(TYPES.JUAN);
+        
+        // Si faltan Juanes en el ecosistema actual se fuerzan transformaciones controladas
+        if (currentJuanes < totalJuanesTarget && objects.length > 0) {{
+            for (let o of objects) {{
+                if (o.type !== TYPES.JUAN) {{
+                    o.type = TYPES.JUAN;
+                    currentJuanes++;
+                    if (currentJuanes >= totalJuanesTarget) break;
+                }}
+            }}
+        }}
+        
+        // Controlar que el 70% de esos Juanes mantengan la condición de "Juanin"
+        let currentJuanesList = objects.filter(o => o.type === TYPES.JUAN);
+        let expectedJuanines = Math.round(currentJuanesList.length * 0.70);
+        let actualJuanines = countJuanines();
+
+        if (actualJuanines < expectedJuanines) {{
+            for (let j of currentJuanesList) {{
+                if (!j.isJuanin) {{
+                    j.isJuanin = true;
+                    actualJuanines++;
+                    if (actualJuanines >= expectedJuanines) break;
+                }}
+            }}
+        }} else if (actualJuanines > expectedJuanines) {{
+            for (let j of currentJuanesList) {{
+                if (j.isJuanin) {{
+                    j.isJuanin = false;
+                    actualJuanines--;
+                    if (actualJuanines <= expectedJuanines) break;
+                }}
+            }}
+        }}
+
         for (let i = objects.length - 1; i >= 0; i--) {{
             let obj = objects[i];
             obj.x += obj.vx;
             if (obj.x < 0 || obj.x > width) obj.vx *= -1;
             
-            // Reajuste de la y basado en el porcentaje de altura dinámico de la pantalla
             let calculatedBaseY = height * obj.depthPercent;
             obj.phase += obj.depthSpeed; 
             obj.y = calculatedBaseY + Math.sin(obj.phase) * obj.depthAmp;

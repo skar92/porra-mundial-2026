@@ -730,11 +730,8 @@ else:
 import streamlit as st
 import streamlit.components.v1 as components
 
-import streamlit as st
-import streamlit.components.v1 as components
-
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (CORRECCIÓN TOTAL DEL FULLSCREEN) ---------
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (CON DETENCIÓN DE 60S) --------------------
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎣 Minijuego: La Pesca de Juan")
@@ -858,7 +855,7 @@ html_pesca = f"""
     let heli = {{ x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, returnTime: 0 }};
     
     let patera = {{ 
-        active: false, x: 0, y: 0, startX: 0, baseVx: 0, maxVx: 1.2, // maxVx suavizado a 1.2
+        active: false, x: 0, y: 0, startX: 0, baseVx: 0, maxVx: 1.2,
         spawnTimer: Date.now() + 15000, direction: 'right',
         hitFlash: 0 
     }};
@@ -905,7 +902,6 @@ html_pesca = f"""
             }}
         }}
 
-        // CORRECCIÓN: Exactamente el 50% de bultos ocultos (discovered = true significa visible)
         let isDiscovered = Math.random() >= 0.50; 
         let maxLifeTime = 25000 + Math.random() * 15000;
         let randomDepthPct = 0.45 + Math.random() * 0.45;
@@ -1015,7 +1011,6 @@ html_pesca = f"""
                 if (wave.x < -60 || wave.x > width + 60) waves.splice(w, 1);
             }}
 
-            // CORRECCIÓN: Aceleración lineal más lenta y controlada hacia el centro
             let distanceToCenter = Math.abs(center - patera.x);
             let maxDistance = Math.abs(center - patera.startX);
             let progress = 1 - (distanceToCenter / maxDistance); 
@@ -1065,7 +1060,6 @@ html_pesca = f"""
             nextSpawnTime = now + 3500;
         }}
 
-        // Forzar proporciones estables en ejecución
         let totalJuanesTarget = Math.round(objects.length * 0.30);
         let currentJuanes = countType(TYPES.JUAN);
         
@@ -1149,10 +1143,17 @@ html_pesca = f"""
         }}
     }}
 
+    // CORRECCIÓN: Mecánica de Lore con el JUANPRONA tramitando detención por 60 segundos
     function processPateraCatch() {{
-        patera.active = false; waves = []; patera.spawnTimer = Date.now() + 45000; inputState = 'returning';
-        score = score === 0 ? 2 : score * 2; scoreEl.innerText = score;
-        triggerGiantAlert("🤝 ¡PATERA ELIMINADA!\\nPuntos DUPLICADOS (" + score + " PTS).", "#2ecc71");
+        patera.active = false; 
+        waves = []; 
+        patera.spawnTimer = Date.now() + 60000; // Desaparece durante exactamente 60 segundos
+        inputState = 'returning';
+        
+        score = score === 0 ? 2 : score * 2; 
+        scoreEl.innerText = score;
+        
+        triggerGiantAlert("🚔 ¡PATERA DETECTADA POR EL JUANPRONA!\\nTramitando detención. Puntos DUPLICADOS (" + score + " PTS) y 60s de tregua marina.", "#3498db");
         if (score >= 10) {{ isGameOver = true; setTimeout(win, 100); }}
     }}
 
@@ -1295,31 +1296,3 @@ html_pesca = f"""
             let seaLineBound = height * 0.35; if(seaLineBound < 180) seaLineBound = 180;
             
             if (fixedAngle >= Math.PI && patera.active) {{
-                hook.mode = 'parabolic';
-                let initialVelocity = 4 + (chargeForce / 100) * 14; 
-                hook.vx = Math.cos(fixedAngle) * initialVelocity; hook.vy = Math.sin(fixedAngle) * initialVelocity; 
-            }} else {{
-                hook.mode = 'straight';
-                let maxReach = Math.sqrt((width/2)**2 + height**2) * 0.95;
-                let currentReach = (chargeForce / 100) * maxReach;
-                hook.targetX = (width/2) + Math.cos(fixedAngle) * currentReach;
-                hook.targetY = seaLineBound + Math.abs(Math.sin(fixedAngle) * currentReach);
-                if (hook.targetX < 0) hook.targetX = 15; if (hook.targetX > width) hook.targetX = width - 15;
-                if (hook.targetY > height) hook.targetY = height - 20;
-            }}
-            hook.x = width / 2; hook.y = seaLineBound - 15;
-        }}
-    }}
-
-    container.addEventListener('mousedown', (e) => {{ if(e.target.id !== 'fullscreen-btn') handleActionStart(); }});
-    window.addEventListener('mouseup', handleActionEnd);
-    container.addEventListener('touchstart', (e) => {{ if(e.target.id !== 'fullscreen-btn') handleActionStart(); }}, {{passive: true}});
-    window.addEventListener('touchend', handleActionEnd);
-
-    draw();
-</script>
-</body>
-</html>
-"""
-
-components.html(html_pesca, height=520)

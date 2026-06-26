@@ -728,11 +728,11 @@ else:
 
 
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN VISIBILIDAD Y AGILIDAD) ---
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN RADAR INVERTIDO Y JUANPRONA) ---
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 Minijuego: La Pesca de Juan (Cardúmenes Rápidos y Visibles)")
-st.write("El 80% de los bultos son visibles. ¡Muévete rápido, ahora los bultos van el doble de rápido y cambian de rumbo constantemente!")
+st.subheader("🎣 Minijuego: La Pesca de Juan (Inversión de Radar y Patrulla Aérea)")
+st.write("Apunta hacia abajo de forma intuitiva. ¡Cuidado con el foco del JUANPRONA si intentas capturar un Juanín inmaduro!")
 
 img_base64_pesca = img_base64 
 
@@ -755,8 +755,8 @@ html_pesca = f"""
 
     #giant-alert {{ 
         position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-        color: white; font-size: 36px; font-weight: bold; text-align: center; 
-        background: rgba(0, 0, 0, 0.95); padding: 40px; border-radius: 20px; 
+        color: white; font-size: 32px; font-weight: bold; text-align: center; 
+        background: rgba(0, 0, 0, 0.95); padding: 35px; border-radius: 20px; 
         box-shadow: 0 0 30px rgba(255,255,255,0.4); display: none; z-index: 40; width: 85%; max-width: 600px;
         box-sizing: border-box; border: 4px solid #ffeb3b; line-height: 1.4;
     }}
@@ -769,12 +769,12 @@ html_pesca = f"""
 <body>
 
 <div id="game-container">
-    <button id="fullscreen-btn">📱 FULLSCREEN + HORIZONTAL</button>
+    <button id="fullscreen-btn">📱 FULLSCREEN</button>
 
     <div id="ui">
-        <div>👤 Juanes: <span id="score">0</span> / 10</div>
+        <div>👤 Puntos Juan: <span id="score">0</span> / 10</div>
         <div>⏱️ Tiempo: <span id="clock">0.0</span>s</div>
-        <div>🐟 Bultos: <span id="pop-count">0</span> / 20</div>
+        <div>🐟 Bultos activos: <span id="pop-count">0</span> / 20</div>
         <div id="instruction-text" style="color: #ffeb3b; margin-top: 5px;">Toca para fijar el ÁNGULO</div>
     </div>
     
@@ -782,9 +782,9 @@ html_pesca = f"""
     <div id="penalty-timer">🟥 PENALIZACIÓN<br><span id="p-seconds">5</span>s</div>
 
     <div id="win-screen">
-        <h2>🏆 ¡PESCA COMPLETADA!</h2>
+        <h2>🏆 ¡DESAFÍO COMPLETADO!</h2>
         <p id="final-time-text"></p>
-        <button id="save-pesca-btn" class="btn">💾 Registrar Tiempo</button>
+        <button id="save-pesca-btn" class="btn">💾 Registrar Récord</button>
     </div>
 
     <canvas id="game-canvas"></canvas>
@@ -842,26 +842,23 @@ html_pesca = f"""
         }}
     }});
 
-    document.addEventListener('fullscreenchange', () => {{
-        if (!document.fullscreenElement) {{
-            if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
-        }}
-        setTimeout(resizeGame, 100);
-    }});
-
     const juanImg = new Image(); let imageLoaded = false;
     juanImg.src = "data:image/png;base64,{img_base64_pesca}";
     juanImg.onload = () => imageLoaded = true;
 
-    // Tiempos y Estados
+    // Variables de Estado
     let score = 0; let accumulatedTime = 0; let lastTimeCheck = Date.now(); let isGameOver = false;
     let penaltyTime = 0; let nPenalties = 0;
     let globalPauseUntil = 0;
 
+    // Mecánica Radar Invertido (Hacia abajo)
     let inputState = 'angle'; 
-    let angleParam = 0; let angleSpeed = 0.035; // Un poco más ágil el indicador
+    let angleParam = 0; let angleSpeed = 0.035; 
     let fixedAngle = 0; let chargeForce = 0;
     
+    // Helicóptero JUANPRONA
+    let heli = {{ x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90 }};
+
     let rainDrops = [];
     let isRainingVisual = false;
     let rainVisualEnd = 0;
@@ -881,12 +878,13 @@ html_pesca = f"""
     let objects = [];
 
     function countType(t) {{ return objects.filter(o => o.type === t).length; }}
+    function countJuanines() {{ return objects.filter(o => o.type === TYPES.JUAN && o.isJuanin).length; }}
 
     function spawnObject() {{
-        // MODIFICACIÓN: Máximo estricto de 20 bultos en el mar
         if (objects.length >= 20) return;
 
-        let currentJuanesPct = objects.length > 0 ? countType(TYPES.JUAN) / objects.length : 0;
+        let currentJuanes = objects.filter(o => o.type === TYPES.JUAN);
+        let currentJuanesPct = objects.length > 0 ? currentJuanes.length / objects.length : 0;
         let currentCardsPct = objects.length > 0 ? countType(TYPES.CARD) / objects.length : 0;
 
         let allowedTypes = [TYPES.BALL];
@@ -894,36 +892,47 @@ html_pesca = f"""
         if (currentCardsPct < 0.20) allowedTypes.push(TYPES.CARD);
 
         let type = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
-        let seaTop = height * 0.38; 
-        if (seaTop < 185) seaTop = 185; 
+        let seaTop = height * 0.35; 
+        if (seaTop < 180) seaTop = 180; 
 
-        // 80% de probabilidad de nacer descubierto
         let isDiscovered = Math.random() < 0.80;
+        
+        // Decidir si es un Juanín respetando que el 20% de los juanes totales lo sean
+        let assignJuanin = false;
+        if (type === TYPES.JUAN) {{
+            let totalJuanesCount = currentJuanes.length + 1;
+            let totalJuaninesCount = countJuanines();
+            if (totalJuaninesCount / totalJuanesCount < 0.20 || Math.random() < 0.20) {{
+                assignJuanin = true;
+            }}
+        }}
+
+        let baseSize = assignJuanin ? 15 : 28; // Juanín es la mitad de grande, súper escurridizo
 
         objects.push({{
             id: Math.random().toString(36),
             x: Math.random() * width,
-            baseY: seaTop + 30 + Math.random() * (height - seaTop - 70),
+            baseY: seaTop + 40 + Math.random() * (height - seaTop - 80),
             y: 0,
             type: type,
-            // MODIFICACIÓN: Velocidad basal duplicada para aumentar ritmo
-            vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 7.5 : 4.0),
+            isJuanin: assignJuanin,
+            vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 8.0 : 4.5),
             ax: 0,
-            depthSpeed: 0.02 + Math.random() * 0.03, // Frecuencia vertical más rápida
-            depthAmp: 8 + Math.random() * 20,
+            depthSpeed: 0.02 + Math.random() * 0.03, 
+            depthAmp: 8 + Math.random() * 18,
             phase: Math.random() * Math.PI * 2,
-            size: 28, 
+            size: baseSize, 
             spawnTime: Date.now(),
             discovered: isDiscovered,
             lastDirectionChange: Date.now(),
-            changeInterval: 400 + Math.random() * 800 // Intervalo de cambio nervioso (0.4s a 1.2s)
+            changeInterval: 300 + Math.random() * 600
         }});
     }}
 
-    // Mar inicializado respetando el nuevo tope
+    // Inicializar cardumen
     for(let i=0; i<15; i++) spawnObject();
 
-    let nextSpawnTime = Date.now() + (5000 + Math.random() * 15000);
+    let nextSpawnTime = Date.now() + 5000;
     let nextToxicRainTime = Date.now() + 20000 + Math.random() * 20000;
 
     let hook = {{ x: 0, y: 0, targetX: 0, targetY: 0, size: 8 }};
@@ -934,6 +943,16 @@ html_pesca = f"""
         lastTimeCheck = now;
 
         if (isGameOver) return;
+        
+        // Movimiento autónomo del Helicóptero (Incluso en pausa cinematográfica para dinamismo visual)
+        if (now > heli.nextChange) {{
+            heli.vx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 6);
+            heli.nextChange = now + 600 + Math.random() * 1200; // Cambios erráticos de rumbo
+        }}
+        heli.x += heli.vx;
+        if (heli.x < 40) {{ heli.x = 40; heli.vx *= -1; }}
+        if (heli.x > width - 40) {{ heli.x = width - 40; heli.vx *= -1; }}
+
         if (now < globalPauseUntil) return; 
 
         if (penaltyTime > now) {{
@@ -949,61 +968,55 @@ html_pesca = f"""
         clockEl.innerText = (accumulatedTime / 1000).toFixed(1);
         popEl.innerText = objects.length;
 
-        if (inputState === 'angle') insText.innerText = "Toca para fijar ÁNGULO";
-        if (inputState === 'force') insText.innerText = "¡Mantén para la FUERZA!";
-
+        // Oscilación del ángulo
         if (inputState === 'angle') {{
             angleParam += angleSpeed;
             if (angleParam > Math.PI || angleParam < 0) angleSpeed *= -1;
+            insText.innerText = "Toca para fijar ÁNGULO";
         }}
         if (inputState === 'force') {{
-            chargeForce = Math.min(chargeForce + 2.2, 100);
+            chargeForce = Math.min(chargeForce + 2.5, 100);
+            insText.innerText = "¡Suelta para lanzar con FUERZA!";
         }}
 
         if (now > nextSpawnTime) {{
-            let batch = Math.floor(2 + Math.random() * 4);
-            for(let k=0; k<batch; k++) spawnObject();
-            nextSpawnTime = now + (5000 + Math.random() * 25000);
+            if(objects.length < 20) spawnObject();
+            nextSpawnTime = now + 4000 + Math.random() * 6000;
         }}
 
         if (now > nextToxicRainTime) {{
             let killCount = Math.floor(objects.length * 0.20);
             for (let i = 0; i < killCount; i++) {{
-                if (objects.length > 5) {{
-                    let idx = Math.floor(Math.random() * objects.length);
-                    objects.splice(idx, 1);
-                }}
+                if (objects.length > 5) objects.splice(Math.floor(Math.random() * objects.length), 1);
             }}
             isRainingVisual = true;
             rainVisualEnd = now + 4000;
-            
-            triggerGiantAlert("🌧️ ¡LLUVIA TÓXICA!\\nEliminado el 20% de bultos al azar", "#e74c3c");
-            nextToxicRainTime = now + 25000 + Math.random() * 25000;
+            triggerGiantAlert("🌧️ ¡LLUVIA TÓXICA!\\nSe reduce el cardumen un 20%", "#e74c3c");
+            nextToxicRainTime = now + 30000 + Math.random() * 20000;
             return; 
         }}
 
         let seaTopBoundary = height * 0.35;
-        if(seaTopBoundary < 180) seaTopBoundary = 180;
+        if(seaTopBoundary < 180) seaLineBoundary = 180;
 
+        // Peces
         for (let i = objects.length - 1; i >= 0; i--) {{
             let obj = objects[i];
 
             if (obj.type === TYPES.JUAN && (now - obj.spawnTime) > 60000) {{
                 objects.splice(i, 1);
-                if(objects.length < 5) spawnObject();
-                triggerGiantAlert("👴 ¡UN JUAN HA MUERTO DE VIEJO!\\n👴 :(", "#95a5a6");
+                spawnObject();
+                triggerGiantAlert("👴 ¡UN JUAN ENVEJECIÓ!\\nRegresó al fondo de la tierra", "#95a5a6");
                 return;
             }}
 
-            // MODIFICACIÓN: Variabilidad extrema de cambio de dirección (Comportamiento Nervioso)
             if (now - obj.lastDirectionChange > obj.changeInterval) {{
-                obj.ax = (Math.random() - 0.5) * 1.5; // Aceleración lateral brusca
-                if (Math.random() > 0.5) obj.vx *= -1; // Volteo de rumbo inmediato
+                obj.ax = (Math.random() - 0.5) * 1.8;
+                if (Math.random() > 0.6) obj.vx *= -1;
                 obj.lastDirectionChange = now;
-                obj.changeInterval = 300 + Math.random() * 700;
             }}
 
-            let maxV = obj.type === TYPES.JUAN ? 6.5 : 3.5;
+            let maxV = obj.type === TYPES.JUAN ? 7.0 : 4.0;
             obj.vx = Math.max(Math.min(obj.vx, maxV), -maxV);
             obj.x += obj.vx;
             if (obj.x < 0 || obj.x > width) obj.vx *= -1;
@@ -1015,14 +1028,15 @@ html_pesca = f"""
             if (obj.y > height - 25) obj.y = height - 25;
         }}
 
+        // Trayectoria Sedal
         if (inputState === 'launching') {{
             let dx = hook.targetX - hook.x;
             let dy = hook.targetY - hook.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
 
-            if (dist > 16) {{
-                hook.x += (dx / dist) * 16;
-                hook.y += (dy / dist) * 16;
+            if (dist > 18) {{
+                hook.x += (dx / dist) * 18;
+                hook.y += (dy / dist) * 18;
             }} else {{
                 let targetHit = null; let hitIndex = -1;
                 for(let i=0; i<objects.length; i++) {{
@@ -1040,10 +1054,11 @@ html_pesca = f"""
                 }}
             }}
         }} else if (inputState === 'returning') {{
-            let dx = (width/2) - hook.x; let dy = 135 - hook.y;
+            let seaLineBound = height * 0.35; if(seaLineBound < 180) seaLineBound = 180;
+            let dx = (width/2) - hook.x; let dy = (seaLineBound - 15) - hook.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist > 22) {{
-                hook.x += (dx / dist) * 22; hook.y += (dy / dist) * 22;
+            if (dist > 25) {{
+                hook.x += (dx / dist) * 25; hook.y += (dy / dist) * 25;
             }} else {{
                 inputState = 'angle';
             }}
@@ -1052,25 +1067,47 @@ html_pesca = f"""
 
     function processCatch(obj, index) {{
         objects.splice(index, 1);
-        if(objects.length < 5) {{ while(objects.length < 5) spawnObject(); }}
+        spawnObject();
         inputState = 'returning';
 
+        let seaLine = height * 0.35; if(seaLine < 180) seaLine = 180;
+
         if (obj.type === TYPES.JUAN) {{
-            score++; scoreEl.innerText = score;
+            if (obj.isJuanin) {{
+                // EVALUACIÓN DE INTERCEPCIÓN RADAR DEL JUANPRONA
+                let xMinRadar = heli.x - heli.radarWidth;
+                let xMaxRadar = heli.x + heli.radarWidth;
+                
+                // Si la vertical del muelle de extracción cae dentro del cono de luz
+                if (width/2 >= xMinRadar && width/2 <= xMaxRadar) {{
+                    let perdidos = Math.floor(score * 0.75);
+                    score -= perdidos;
+                    if (score < 0) score = 0;
+                    scoreEl.innerText = score;
+                    triggerGiantAlert("🚨 ¡MULTAZO DEL JUANPRONA! 🚁\\nTe han pillado con un Juanín inmaduro. Pierdes el 75% de tus puntos (-" + perdidos + " PTS)", "#e74c3c");
+                }} else {{
+                    score += 2;
+                    scoreEl.innerText = score;
+                    triggerGiantAlert("👶 ¡JUANÍN EXTRAÍDO CON ÉXITO!\\nEvitaste los focos aéreos. ¡Ganancia furtiva de +2 Puntos!", "#f39c12");
+                }}
+            }} else {{
+                score++;
+                scoreEl.innerText = score;
+                triggerGiantAlert("👤 ¡JUAN ADULTO CAPTURADO!\\n+1 Al casillero", "#2ecc71");
+            }}
+
             if (score >= 10) {{
                 isGameOver = true;
                 setTimeout(win, 100);
-            }} else {{
-                triggerGiantAlert("👤 ¡JUAN CAPTURADO!\\n+1 Al marcador", "#2ecc71");
             }}
         }} else if (obj.type === TYPES.CARD) {{
             nPenalties++;
             let extraSeconds = 4 + nPenalties;
             accumulatedTime += (extraSeconds * 1000); 
             penaltyTime = Date.now() + (extraSeconds * 1000);
-            triggerGiantAlert("🟥 ¡TARJETA ROJA!\\n+" + extraSeconds + " segundos sumados DIRECTAMENTE al marcador", "#ff4444");
+            triggerGiantAlert("🟥 ¡TARJETA ROJA!\\n+" + extraSeconds + "s añadidos al cronómetro", "#ff4444");
         }} else {{
-            triggerGiantAlert("⚽ ¡PELOTA DE FÚTBOL!\\nBulto fallido, sigue buscando", "#3498db");
+            triggerGiantAlert("⚽ ¡PELOTA DE FÚTBOL!\\nDesecho marino limpiado", "#3498db");
         }}
     }}
 
@@ -1078,7 +1115,7 @@ html_pesca = f"""
         if (document.fullscreenElement) document.exitFullscreen();
         const finalTime = (accumulatedTime / 1000).toFixed(2);
         winScreen.style.display = 'block';
-        document.getElementById('final-time-text').innerText = "¡Has completado el reto en " + finalTime + "s!";
+        document.getElementById('final-time-text').innerText = "¡Explotación completada con éxito en " + finalTime + "s!";
         document.getElementById('save-pesca-btn').onclick = () => {{
             let parentUrl = document.referrer.split('?')[0]; 
             window.open(parentUrl + '?game_pesca_score=' + finalTime, '_blank');
@@ -1090,108 +1127,121 @@ html_pesca = f"""
 
         ctx.clearRect(0, 0, width, height);
 
-        let seaLine = height * 0.35;
-        if(seaLine < 180) seaLine = 180;
+        let seaLine = height * 0.35; if(seaLine < 180) seaLine = 180;
 
+        // Cielo y Mar
         let skyGrad = ctx.createLinearGradient(0, 0, 0, seaLine);
-        skyGrad.addColorStop(0, '#87CEEB');
-        skyGrad.addColorStop(1, '#a1dbf1');
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, width, seaLine);
+        skyGrad.addColorStop(0, '#70b5d3'); skyGrad.addColorStop(1, '#9ecfe4');
+        ctx.fillStyle = skyGrad; ctx.fillRect(0, 0, width, seaLine);
 
         let seaGrad = ctx.createLinearGradient(0, seaLine, 0, height);
-        seaGrad.addColorStop(0, '#1E90FF');
-        seaGrad.addColorStop(1, '#051937');
-        ctx.fillStyle = seaGrad;
-        ctx.fillRect(0, seaLine, width, height - seaLine);
+        seaGrad.addColorStop(0, '#1E90FF'); seaGrad.addColorStop(1, '#051937');
+        ctx.fillStyle = seaGrad; ctx.fillRect(0, seaLine, width, height - seaLine);
 
+        // DIBUJAR RADAR PROYECTADO DEL JUANPRONA (Foco de Luz)
+        ctx.fillStyle = 'rgba(255, 235, 59, 0.18)';
+        ctx.beginPath();
+        ctx.moveTo(heli.x, heli.y + 10);
+        ctx.lineTo(heli.x - heli.radarWidth, seaLine);
+        ctx.lineTo(heli.x + heli.radarWidth, seaLine);
+        ctx.closePath();
+        ctx.fill();
+
+        // Dibujar Helicóptero JUANPRONA
+        ctx.fillStyle = '#1e3f20'; // Verde militar/patrulla
+        ctx.fillRect(heli.x - 22, heli.y - 10, 44, 20);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(heli.x - 32, heli.y - 12, 64, 3); // Hélice superior
+        ctx.font = "10px sans-serif";
+        ctx.fillStyle = '#fff';
+        ctx.fillText("🚁 JUANPRONA", heli.x - 35, heli.y - 18);
+
+        // Lluvia Tóxica
         if (isRainingVisual) {{
             if (Date.now() > rainVisualEnd) isRainingVisual = false;
-            if (rainDrops.length < 50) {{
-                rainDrops.push({{ x: Math.random() * width, y: 0, speed: 9 + Math.random() * 5, len: 15 + Math.random() * 12 }});
-            }}
+            if (rainDrops.length < 40) rainDrops.push({{ x: Math.random() * width, y: 0, speed: 10, len: 18 }});
         }}
-
         for (let r = rainDrops.length - 1; r >= 0; r--) {{
-            let drop = rainDrops[r];
-            ctx.strokeStyle = '#39ff14'; 
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(drop.x, drop.y);
-            ctx.lineTo(drop.x + 1, drop.y + drop.len);
-            ctx.stroke();
+            let drop = rainDrops[r]; ctx.strokeStyle = '#39ff14'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(drop.x, drop.y); ctx.lineTo(drop.x + 1, drop.y + drop.len); ctx.stroke();
             if (Date.now() >= globalPauseUntil) drop.y += drop.speed;
             if (drop.y > height) rainDrops.splice(r, 1);
         }}
 
-        // Renderizado inteligente de bultos (80% descubiertos)
+        // Renderizado de Bultos y Juanines
         objects.forEach(obj => {{
             ctx.beginPath();
             ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI*2);
-            
-            // Si está descubierto cambia ligeramente el fondo para identificarlo mejor
-            if (obj.discovered) {{
-                ctx.fillStyle = 'rgba(30, 80, 130, 0.9)';
-            }} else {{
-                ctx.fillStyle = 'rgba(24, 48, 89, 0.95)'; // Totalmente opaco incógnito
-            }}
+            ctx.fillStyle = obj.discovered ? 'rgba(30, 85, 145, 0.9)' : 'rgba(24, 48, 89, 0.95)';
             ctx.fill();
-            ctx.strokeStyle = obj.discovered ? 'rgba(255,255,255,0.6)' : 'rgba(231, 76, 60, 0.4)';
-            ctx.lineWidth = 2;
+            ctx.strokeStyle = obj.isJuanin ? '#ffeb3b' : 'rgba(255,255,255,0.4)';
+            ctx.lineWidth = obj.isJuanin ? 2.5 : 1.5;
             ctx.stroke();
             
-            ctx.fillStyle = '#fff';
-            ctx.font = "bold 17px sans-serif";
-            
-            // MODIFICACIÓN REVELACIÓN (80% visibles desde el agua)
-            if (obj.discovered) {{
-                let badge = '⚽';
-                if (obj.type === TYPES.JUAN) badge = '👤';
-                if (obj.type === TYPES.CARD) badge = '🟥';
-                ctx.fillText(badge, obj.x - 8, obj.y + 6);
+            // Si está descubierto y es un Juan o Juanín, se incrusta la foto en miniatura
+            if (obj.discovered && imageLoaded && obj.type === TYPES.JUAN) {{
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(obj.x, obj.y, obj.size - 2, 0, Math.PI*2);
+                ctx.clip();
+                // Ajustar dimensiones de la foto según si es Juan (Grande) o Juanín (Miniatura)
+                let dim = obj.isJuanin ? 30 : 54;
+                ctx.drawImage(juanImg, obj.x - dim/2, obj.y - dim/2, dim, dim);
+                ctx.restore();
+            }} else if (obj.discovered) {{
+                // Otros bultos descubiertos (Pelota o Tarjeta)
+                ctx.fillStyle = '#fff';
+                ctx.font = "bold 16px sans-serif";
+                let icon = obj.type === TYPES.CARD ? '🟥' : '⚽';
+                ctx.fillText(icon, obj.x - 8, obj.y + 6);
             }} else {{
-                ctx.fillText("❓", obj.x - 6, obj.y + 6);
+                // Incógnito
+                ctx.fillStyle = '#fff'; ctx.font = "bold 15px sans-serif";
+                ctx.fillText("❓", obj.x - 6, obj.y + 5);
             }}
         }});
 
+        // Estructura muelle de pesca
         ctx.fillStyle = '#5c3a21'; ctx.fillRect(width/2 - 35, seaLine - 15, 70, 15);
         if (imageLoaded) {{
-            ctx.drawImage(juanImg, width/2 - 25, seaLine - 75, 50, 65);
-        }} else {{
-            ctx.fillStyle = '#3498db'; ctx.fillRect(width/2 - 12, seaLine - 65, 24, 50);
+            ctx.drawImage(juanImg, width/2 - 22, seaLine - 72, 44, 60);
         }}
 
-        let radarRadius = 45; let radarX = width/2; let radarY = 65;
+        // MODIFICACIÓN EXCLUSIVA: RADAR INVERTIDO (Circunferencia orientada HACIA ABAJO)
+        let radarRadius = 50; let radarX = width/2; let radarY = seaLine;
         ctx.beginPath();
-        ctx.arc(radarX, radarY, radarRadius, 0, Math.PI, true);
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        // Dibujar el arco semicircular hacia abajo (0 a Pi en sentido horario)
+        ctx.arc(radarX, radarY, radarRadius, 0, Math.PI, false);
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // El indicador oscila hacia abajo de forma intuitiva
+        let ballX = radarX + Math.cos(angleParam) * radarRadius;
+        let ballY = radarY + Math.sin(angleParam) * radarRadius;
+        
+        ctx.beginPath();
+        ctx.moveTo(radarX, radarY);
+        ctx.lineTo(ballX, ballY);
+        ctx.strokeStyle = '#ffeb3b';
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        let ballX = radarX + Math.cos(angleParam - Math.PI) * radarRadius;
-        let ballY = radarY + Math.sin(angleParam - Math.PI) * radarRadius;
         ctx.beginPath();
         ctx.arc(ballX, ballY, 7, 0, Math.PI*2);
         ctx.fillStyle = (inputState === 'angle') ? '#ffeb3b' : '#2ecc71';
         ctx.fill();
 
         if (inputState === 'force') {{
-            ctx.fillStyle = '#e74c3c'; ctx.fillRect(width/2 - 50, 15, chargeForce, 8);
-            ctx.strokeStyle = '#fff'; ctx.strokeRect(width/2 - 50, 15, 100, 8);
+            ctx.fillStyle = '#e74c3c'; ctx.fillRect(width/2 - 50, seaLine - 110, chargeForce, 10);
+            ctx.strokeStyle = '#fff'; ctx.strokeRect(width/2 - 50, seaLine - 110, 100, 10);
         }}
 
+        // Sedal
         if (inputState === 'launching' || inputState === 'returning') {{
-            ctx.beginPath();
-            ctx.moveTo(width/2, seaLine - 40);
-            ctx.lineTo(hook.x, hook.y);
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(hook.x, hook.y, 6, 0, Math.PI*2);
-            ctx.fillStyle = '#e74c3c';
-            ctx.fill();
+            ctx.beginPath(); ctx.moveTo(width/2, seaLine - 15); ctx.lineTo(hook.x, hook.y);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.stroke();
+            ctx.beginPath(); ctx.arc(hook.x, hook.y, 6, 0, Math.PI*2); ctx.fillStyle = '#e74c3c'; ctx.fill();
         }}
 
         requestAnimationFrame(draw);
@@ -1201,7 +1251,7 @@ html_pesca = f"""
         if (isGameOver || Date.now() < penaltyTime || Date.now() < globalPauseUntil) return;
 
         if (inputState === 'angle') {{
-            fixedAngle = angleParam - Math.PI;
+            fixedAngle = angleParam; // Guardar el ángulo hacia abajo fijado
             inputState = 'force';
             chargeForce = 0;
         }}
@@ -1210,20 +1260,19 @@ html_pesca = f"""
     function handleActionEnd() {{
         if (inputState === 'force') {{
             inputState = 'launching';
-            let maxReach = Math.sqrt( (width/2)*(width/2) + height*height );
+            let maxReach = Math.sqrt( (width/2)*(width/2) + height*height ) * 0.9;
             let currentReach = (chargeForce / 100) * maxReach;
 
+            // Lanzamiento directo hacia el fondo marino usando el ángulo invertido
             hook.targetX = (width/2) + Math.cos(fixedAngle) * currentReach;
-            
-            let seaLineBound = height * 0.35;
-            if(seaLineBound < 180) seaLineBound = 180;
-            hook.targetY = seaLineBound + 20 + Math.abs(Math.sin(fixedAngle) * currentReach * 0.7);
+            let seaLineBound = height * 0.35; if(seaLineBound < 180) seaLineBound = 180;
+            hook.targetY = seaLineBound + Math.abs(Math.sin(fixedAngle) * currentReach);
 
             if (hook.targetX < 0) hook.targetX = 15;
             if (hook.targetX > width) hook.targetX = width - 15;
             if (hook.targetY > height) hook.targetY = height - 20;
 
-            hook.x = width / 2; hook.y = height * 0.35;
+            hook.x = width / 2; hook.y = seaLineBound;
         }}
     }}
 
@@ -1231,8 +1280,6 @@ html_pesca = f"""
     window.addEventListener('mouseup', handleActionEnd);
     container.addEventListener('touchstart', (e) => {{ if(e.target.id !== 'fullscreen-btn') handleActionStart(); }}, {{passive: true}});
     window.addEventListener('touchend', handleActionEnd);
-    window.addEventListener('keydown', (e) => {{ if(e.code === 'Space') {{ e.preventDefault(); handleActionStart(); }} }});
-    window.addEventListener('keyup', (e) => {{ if(e.code === 'Space') handleActionEnd(); }});
 
     draw();
 </script>

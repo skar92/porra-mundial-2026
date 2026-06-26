@@ -728,11 +728,11 @@ else:
 
 
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN CORREGIDA FULLSCREEN Y TIEMPOS) ---
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (EDICIÓN VISIBILIDAD Y AGILIDAD) ---
 # ==============================================================================
 st.markdown("---")
-st.subheader("🎣 Minijuego: La Pesca de Juan (Física de Pantalla y Penalización de Tiempo)")
-st.write("¡Cuidado! Las tarjetas rojas ahora **suman segundos directamente a tu marcador de tiempo final**.")
+st.subheader("🎣 Minijuego: La Pesca de Juan (Cardúmenes Rápidos y Visibles)")
+st.write("El 80% de los bultos son visibles. ¡Muévete rápido, ahora los bultos van el doble de rápido y cambian de rumbo constantemente!")
 
 img_base64_pesca = img_base64 
 
@@ -774,7 +774,7 @@ html_pesca = f"""
     <div id="ui">
         <div>👤 Juanes: <span id="score">0</span> / 10</div>
         <div>⏱️ Tiempo: <span id="clock">0.0</span>s</div>
-        <div>🐟 Bultos: <span id="pop-count">0</span></div>
+        <div>🐟 Bultos: <span id="pop-count">0</span> / 20</div>
         <div id="instruction-text" style="color: #ffeb3b; margin-top: 5px;">Toca para fijar el ÁNGULO</div>
     </div>
     
@@ -859,7 +859,7 @@ html_pesca = f"""
     let globalPauseUntil = 0;
 
     let inputState = 'angle'; 
-    let angleParam = 0; let angleSpeed = 0.03;
+    let angleParam = 0; let angleSpeed = 0.035; // Un poco más ágil el indicador
     let fixedAngle = 0; let chargeForce = 0;
     
     let rainDrops = [];
@@ -883,7 +883,8 @@ html_pesca = f"""
     function countType(t) {{ return objects.filter(o => o.type === t).length; }}
 
     function spawnObject() {{
-        if (objects.length >= 60) return;
+        // MODIFICACIÓN: Máximo estricto de 20 bultos en el mar
+        if (objects.length >= 20) return;
 
         let currentJuanesPct = objects.length > 0 ? countType(TYPES.JUAN) / objects.length : 0;
         let currentCardsPct = objects.length > 0 ? countType(TYPES.CARD) / objects.length : 0;
@@ -893,10 +894,11 @@ html_pesca = f"""
         if (currentCardsPct < 0.20) allowedTypes.push(TYPES.CARD);
 
         let type = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
-
-        // CORRECCIÓN RADICAL: El mar empieza a partir de un porcentaje fijo de la altura visual
         let seaTop = height * 0.38; 
         if (seaTop < 185) seaTop = 185; 
+
+        // 80% de probabilidad de nacer descubierto
+        let isDiscovered = Math.random() < 0.80;
 
         objects.push({{
             id: Math.random().toString(36),
@@ -904,20 +906,25 @@ html_pesca = f"""
             baseY: seaTop + 30 + Math.random() * (height - seaTop - 70),
             y: 0,
             type: type,
-            vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 3.5 : 1.2),
+            // MODIFICACIÓN: Velocidad basal duplicada para aumentar ritmo
+            vx: (Math.random() - 0.5) * (type === TYPES.JUAN ? 7.5 : 4.0),
             ax: 0,
-            depthSpeed: 0.01 + Math.random() * 0.02,
+            depthSpeed: 0.02 + Math.random() * 0.03, // Frecuencia vertical más rápida
             depthAmp: 8 + Math.random() * 20,
             phase: Math.random() * Math.PI * 2,
             size: 28, 
-            spawnTime: Date.now()
+            spawnTime: Date.now(),
+            discovered: isDiscovered,
+            lastDirectionChange: Date.now(),
+            changeInterval: 400 + Math.random() * 800 // Intervalo de cambio nervioso (0.4s a 1.2s)
         }});
     }}
 
-    for(let i=0; i<30; i++) spawnObject();
+    // Mar inicializado respetando el nuevo tope
+    for(let i=0; i<15; i++) spawnObject();
 
-    let nextSpawnTime = Date.now() + (5000 + Math.random() * 35000);
-    let nextToxicRainTime = Date.now() + 15000 + Math.random() * 20000;
+    let nextSpawnTime = Date.now() + (5000 + Math.random() * 15000);
+    let nextToxicRainTime = Date.now() + 20000 + Math.random() * 20000;
 
     let hook = {{ x: 0, y: 0, targetX: 0, targetY: 0, size: 8 }};
 
@@ -950,13 +957,13 @@ html_pesca = f"""
             if (angleParam > Math.PI || angleParam < 0) angleSpeed *= -1;
         }}
         if (inputState === 'force') {{
-            chargeForce = Math.min(chargeForce + 1.8, 100);
+            chargeForce = Math.min(chargeForce + 2.2, 100);
         }}
 
         if (now > nextSpawnTime) {{
-            let batch = Math.floor(4 + Math.random() * 8);
+            let batch = Math.floor(2 + Math.random() * 4);
             for(let k=0; k<batch; k++) spawnObject();
-            nextSpawnTime = now + (5000 + Math.random() * 35000);
+            nextSpawnTime = now + (5000 + Math.random() * 25000);
         }}
 
         if (now > nextToxicRainTime) {{
@@ -988,11 +995,15 @@ html_pesca = f"""
                 return;
             }}
 
-            if (obj.type === TYPES.JUAN) {{
-                obj.ax = (Math.random() - 0.5) * 0.3;
+            // MODIFICACIÓN: Variabilidad extrema de cambio de dirección (Comportamiento Nervioso)
+            if (now - obj.lastDirectionChange > obj.changeInterval) {{
+                obj.ax = (Math.random() - 0.5) * 1.5; // Aceleración lateral brusca
+                if (Math.random() > 0.5) obj.vx *= -1; // Volteo de rumbo inmediato
+                obj.lastDirectionChange = now;
+                obj.changeInterval = 300 + Math.random() * 700;
             }}
-            obj.vx += obj.ax;
-            let maxV = obj.type === TYPES.JUAN ? 3.2 : 1.1;
+
+            let maxV = obj.type === TYPES.JUAN ? 6.5 : 3.5;
             obj.vx = Math.max(Math.min(obj.vx, maxV), -maxV);
             obj.x += obj.vx;
             if (obj.x < 0 || obj.x > width) obj.vx *= -1;
@@ -1000,7 +1011,6 @@ html_pesca = f"""
             obj.phase += obj.depthSpeed;
             obj.y = obj.baseY + Math.sin(obj.phase) * obj.depthAmp;
             
-            // CORRECCIÓN FISICA: Forzar el confinamiento estricto bajo el horizonte en cualquier resolución
             if (obj.y < seaTopBoundary + 25) obj.y = seaTopBoundary + 25;
             if (obj.y > height - 25) obj.y = height - 25;
         }}
@@ -1010,9 +1020,9 @@ html_pesca = f"""
             let dy = hook.targetY - hook.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
 
-            if (dist > 14) {{
-                hook.x += (dx / dist) * 14;
-                hook.y += (dy / dist) * 14;
+            if (dist > 16) {{
+                hook.x += (dx / dist) * 16;
+                hook.y += (dy / dist) * 16;
             }} else {{
                 let targetHit = null; let hitIndex = -1;
                 for(let i=0; i<objects.length; i++) {{
@@ -1032,8 +1042,8 @@ html_pesca = f"""
         }} else if (inputState === 'returning') {{
             let dx = (width/2) - hook.x; let dy = 135 - hook.y;
             let dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist > 18) {{
-                hook.x += (dx / dist) * 18; hook.y += (dy / dist) * 18;
+            if (dist > 22) {{
+                hook.x += (dx / dist) * 22; hook.y += (dy / dist) * 22;
             }} else {{
                 inputState = 'angle';
             }}
@@ -1056,10 +1066,7 @@ html_pesca = f"""
         }} else if (obj.type === TYPES.CARD) {{
             nPenalties++;
             let extraSeconds = 4 + nPenalties;
-            
-            // MODIFICACIÓN SOLICITADA: Sumar analíticamente la penalización de tiempo directamente al marcador general
             accumulatedTime += (extraSeconds * 1000); 
-            
             penaltyTime = Date.now() + (extraSeconds * 1000);
             triggerGiantAlert("🟥 ¡TARJETA ROJA!\\n+" + extraSeconds + " segundos sumados DIRECTAMENTE al marcador", "#ff4444");
         }} else {{
@@ -1083,7 +1090,6 @@ html_pesca = f"""
 
         ctx.clearRect(0, 0, width, height);
 
-        // Renderizado adaptativo del agua de fondo dinámico según aspecto Fullscreen
         let seaLine = height * 0.35;
         if(seaLine < 180) seaLine = 180;
 
@@ -1099,7 +1105,6 @@ html_pesca = f"""
         ctx.fillStyle = seaGrad;
         ctx.fillRect(0, seaLine, width, height - seaLine);
 
-        // Control visual de la tormenta radiactiva
         if (isRainingVisual) {{
             if (Date.now() > rainVisualEnd) isRainingVisual = false;
             if (rainDrops.length < 50) {{
@@ -1115,26 +1120,40 @@ html_pesca = f"""
             ctx.moveTo(drop.x, drop.y);
             ctx.lineTo(drop.x + 1, drop.y + drop.len);
             ctx.stroke();
-            
             if (Date.now() >= globalPauseUntil) drop.y += drop.speed;
             if (drop.y > height) rainDrops.splice(r, 1);
         }}
 
-        // Dibujar bultos GIGANTES (Solo confinados en zona marina)
+        // Renderizado inteligente de bultos (80% descubiertos)
         objects.forEach(obj => {{
             ctx.beginPath();
             ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI*2);
-            ctx.fillStyle = 'rgba(24, 48, 89, 0.88)';
+            
+            // Si está descubierto cambia ligeramente el fondo para identificarlo mejor
+            if (obj.discovered) {{
+                ctx.fillStyle = 'rgba(30, 80, 130, 0.9)';
+            }} else {{
+                ctx.fillStyle = 'rgba(24, 48, 89, 0.95)'; // Totalmente opaco incógnito
+            }}
             ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+            ctx.strokeStyle = obj.discovered ? 'rgba(255,255,255,0.6)' : 'rgba(231, 76, 60, 0.4)';
             ctx.lineWidth = 2;
             ctx.stroke();
+            
             ctx.fillStyle = '#fff';
-            ctx.font = "bold 16px sans-serif";
-            ctx.fillText("❓", obj.x - 7, obj.y + 6);
+            ctx.font = "bold 17px sans-serif";
+            
+            // MODIFICACIÓN REVELACIÓN (80% visibles desde el agua)
+            if (obj.discovered) {{
+                let badge = '⚽';
+                if (obj.type === TYPES.JUAN) badge = '👤';
+                if (obj.type === TYPES.CARD) badge = '🟥';
+                ctx.fillText(badge, obj.x - 8, obj.y + 6);
+            }} else {{
+                ctx.fillText("❓", obj.x - 6, obj.y + 6);
+            }}
         }});
 
-        // Estructuras flotantes
         ctx.fillStyle = '#5c3a21'; ctx.fillRect(width/2 - 35, seaLine - 15, 70, 15);
         if (imageLoaded) {{
             ctx.drawImage(juanImg, width/2 - 25, seaLine - 75, 50, 65);
@@ -1142,7 +1161,6 @@ html_pesca = f"""
             ctx.fillStyle = '#3498db'; ctx.fillRect(width/2 - 12, seaLine - 65, 24, 50);
         }}
 
-        // Radar circular superior
         let radarRadius = 45; let radarX = width/2; let radarY = 65;
         ctx.beginPath();
         ctx.arc(radarX, radarY, radarRadius, 0, Math.PI, true);
@@ -1162,7 +1180,6 @@ html_pesca = f"""
             ctx.strokeStyle = '#fff'; ctx.strokeRect(width/2 - 50, 15, 100, 8);
         }}
 
-        // Sedal del anzuelo
         if (inputState === 'launching' || inputState === 'returning') {{
             ctx.beginPath();
             ctx.moveTo(width/2, seaLine - 40);

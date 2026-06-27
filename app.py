@@ -1175,15 +1175,16 @@ html_pesca_template = """
         waves = []; 
         patera.spawnTimer = Date.now() + 60000; 
         
-        heli.active = false; // El helicóptero se va
-        heli.reactiveTime = Date.now() + 60000; // Volverá en 60 segundos exactos
+        heli.active = false; 
+        heli.reactiveTime = Date.now() + 60000; 
         
         inputState = 'returning';
         
-        score = score === 0 ? 2 : score * 2; 
+        // MODIFICACIÓNaquí: Ahora solo se suman 2 puntos fijos
+        score += 2; 
         scoreEl.innerText = score;
         
-        triggerGiantAlert("🚔 ¡EL JUANPRONA SE LLEVA LA PATERA!\\nTramitando la detención en comisaría. Puntos DUPLICADOS (" + score + " PTS) y 60s de tregua total sin radar ni pateras.", "#3498db");
+        triggerGiantAlert("🚔 ¡EL JUANPRONA SE LLEVA LA PATERA!\\nTramitando la detención en comisaría. ¡Suman +2 PUNTOS fijos! 60s de tregua.", "#3498db");
         if (score >= 10) { isGameOver = true; setTimeout(win, 100); }
     }
 

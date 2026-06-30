@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -34,7 +35,7 @@ porra = {
     'Juan': ['Canadá', 'Turquía', 'Austria', 'Escocia', 'Bosnia and Herzegovina']
 }
 
-# --- GOLES ACTUALIZADOS AL 29/06 ---
+# --- GOLES DE FUTBOLISTAS ---
 porra_futbolistas = {
     'Sierra': {'Kane': 3, 'Julián Álvarez': 0},
     'Joaquín': {'Messi': 6, 'Olise': 0},
@@ -48,6 +49,12 @@ porra_futbolistas = {
 
 puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos, dict) else 0 
                                for jugador, datos in porra_futbolistas.items()}
+
+# --- NUEVA COLUMNA: PUNTOS GANADOS EN APUESTA MESA ---
+puntos_apuesta = {
+    'Sierra': 0, 'Joaquín': 0, 'Ejkar': -1, 'Vecina': 0,
+    'Telenti': 0, 'Miguel Ángel': 0, 'Mírete': 1, 'Juan': 0
+}
 
 traduccion_interna = {
     'Francia': 'Francia', 'España': 'España', 'Inglaterra': 'Inglaterra', 'Portugal': 'Portugal',
@@ -63,56 +70,68 @@ banderas = {
     'Francia': '🇫🇷', 'España': '🇪🇸', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹',
     'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Alemania': '🇩🇪', 'Holanda': '🇳🇱',
     'Noruega': '🇳🇴', 'Bélgica': '🇧🇪', 'Marruecos': '🇲🇦', 'Colombia': '🇨🇴',
-    'Japón': 'JJ🇵', 'México': '🇲🇽', 'EE.UU.': '🇺🇸', 'Uruguay': '🇺🇾',
+    'Japón': '🇯🇵', 'México': '🇲🇽', 'EE.UU.': '🇺🇸', 'Uruguay': '🇺🇾',
     'Croacia': '🇭🇷', 'Suiza': '🇨🇭', 'Ecuador': '🇪🇨', 'Austria': '🇦🇹',
     'Turquía': '🇹🇷', 'Senegal': '🇸🇳', 'Escocia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Canadá': '🇨🇦',
     'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦'
 }
 
-# --- CUOTAS REALES EXTRAÍDAS DE LAS CAPTURAS ---
+# --- CUOTAS REALES ACTUALIZADAS AL 30/06 ---
 cuotas_octavos = {
-    'Argentina': 1.07, 'Inglaterra': 1.12, 'Francia': 1.12, 'España': 1.17, 'EE. UU.': 1.17, 
-    'Alemania': 1.20, 'Colombia': 1.28, 'Brasil': 1.33, 'Portugal': 1.40, 'Suiza': 1.50, 
-    'Noruega': 1.54, 'México': 1.57, 'Bélgica': 1.57, 'Países Bajos': 1.63, 'Marruecos': 2.35, 
-    'Ecuador': 2.50, 'Senegal': 2.62, 'Costa de Marfil': 2.75, 'Croacia': 3.20, 'Japón': 3.40, 
-    'Uruguay': 4.75, 'Austria': 7.00, 'Canadá': 1.00,
-    'Turquía': float('inf'), 'Escocia': float('inf'), 'Bosnia y Herzegovina': float('inf'), 'Sudáfrica': float('inf')
+    'Canadá': 1.00, 'Brasil': 1.00, 'Marruecos': 1.00, 'Paraguay': 1.00, # Clasificados directos
+    'Argentina': 1 + 1/14, 'Inglaterra': 1 + 1/9, 'Francia': 1 + 1/8, 'España': 1 + 1/7, 
+    'EE. UU.': 1 + 1/6, 'Colombia': 1 + 2/9, 'Portugal': 1 + 4/11, 'Suiza': 1 + 8/15, 
+    'Noruega': 1 + 4/7, 'México': 1 + 4/7, 'Bélgica': 1 + 8/13, 'Senegal': 1 + 13/10,
+    'Ecuador': 1 + 11/8, 'Costa de Marfil': 1 + 11/8, 'Croacia': 1 + 11/5, 'Austria': 1 + 9/2, 
+    'Bosnia y Herzegovina': 5.00, 'Egipto': 1 + 4/6, 'Australia': 1 + 6/5, 'Argelia': 1 + 6/4,
+    'Ghana': 1 + 10/3, 'Suecia': 6.00, 'RD Congo': 1 + 11/2, 'Cabo Verde': 9.00,
+    # Eliminados fulminados
+    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
+    'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'), 'Sudáfrica': float('inf')
 }
 
 cuotas_cuartos = {
-    'Argentina': 1.25, 'Francia': 1.53, 'Inglaterra': 1.57, 'España': 1.72, 'Brasil': 1.95, 
-    'Países Bajos': 2.00, 'EE. UU.': 2.10, 'Colombia': 2.10, 'Bélgica': 2.87, 'Alemania': 2.87, 
-    'Suiza': 2.87, 'Portugal': 3.00, 'Canadá': 3.25, 'Marruecos': 3.25, 'Noruega': 3.25, 
-    'México': 3.75, 'Japón': 6.00, 'Senegal': 6.00, 'Ecuador': 7.00, 'Costa de Marfil': 8.00, 
-    'Uruguay': 10.00, 'Croacia': 10.00, 'Austria': 15.00,
-    'Turquía': float('inf'), 'Escocia': float('inf'), 'Bosnia y Herzegovina': float('inf'), 'Sudáfrica': float('inf')
+    'Argentina': 1.20, 'Francia': 1.20, 'Marruecos': 1.38, 'Brasil': 1.40, 'Inglaterra': 1.50, 
+    'España': 1.65, 'Colombia': 1.90, 'EE. UU.': 2.10, 'Bélgica': 2.87, 'Portugal': 2.87, 
+    'Canadá': 3.00, 'Suiza': 3.00, 'Noruega': 3.25, 'México': 3.75, 'Senegal': 5.50, 
+    'Paraguay': 6.50, 'Ecuador': 7.00, 'Egipto': 7.00, 'Costa de Marfil': 8.00, 'Argelia': 9.00, 
+    'Ghana': 9.00, 'Croacia': 10.00, 'Australia': 11.00, 'Suecia': 15.00, 'Austria': 17.00, 
+    'Bosnia y Herzegovina': 17.00, 'RD Congo': 17.00, 'Cabo Verde': 34.00,
+    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
+    'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'), 'Sudáfrica': float('inf')
 }
 
 cuotas_semis = {
-    'Argentina': 1.66, 'Francia': 2.00, 'España': 2.37, 'Inglaterra': 2.50, 'Brasil': 3.50, 
-    'Alemania': 4.50, 'Países Bajos': 4.50, 'Portugal': 4.50, 'Colombia': 5.00, 'EE. UU.': 6.00, 
-    'Noruega': 7.00, 'México': 8.00, 'Bélgica': 9.00, 'Suiza': 10.00, 'Marruecos': 10.00, 
-    'Japón': 12.00, 'Canadá': 13.00, 'Uruguay': 21.00, 'Ecuador': 17.00, 'Croacia': 17.00, 
-    'Senegal': 17.00, 'Costa de Marfil': 21.00, 'Austria': 26.00,
-    'Turquía': float('inf'), 'Escocia': float('inf'), 'Bosnia y Herzegovina': float('inf'), 'Sudáfrica': float('inf')
+    'Francia': 1.53, 'Argentina': 1.57, 'España': 2.37, 'Inglaterra': 2.50, 'Brasil': 2.50, 
+    'Marruecos': 4.00, 'Portugal': 4.50, 'Colombia': 4.50, 'EE. UU.': 5.50, 'Noruega': 6.50, 
+    'Bélgica': 7.00, 'México': 8.00, 'Suiza': 9.00, 'Canadá': 13.00, 'Paraguay': 15.00, 
+    'Senegal': 15.00, 'Ecuador': 17.00, 'Croacia': 17.00, 'Egipto': 21.00, 'Costa de Marfil': 21.00, 
+    'Austria': 26.00, 'Australia': 26.00, 'Suecia': 26.00, 'Argelia': 29.00, 'Ghana': 34.00, 
+    'Bosnia y Herzegovina': 67.00, 'RD Congo': 67.00, 'Cabo Verde': 81.00,
+    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
+    'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'), 'Sudáfrica': float('inf')
 }
 
 cuotas_final = {
-    'Francia': 2.87, 'Argentina': 2.87, 'Inglaterra': 4.00, 'España': 4.33, 'Brasil': 6.50, 
-    'Portugal': 7.00, 'Países Bajos': 8.00, 'Alemania': 9.00, 'Colombia': 13.00, 'EE. UU.': 15.00, 
-    'Noruega': 15.00, 'México': 17.00, 'Bélgica': 21.00, 'Marruecos': 23.00, 'Suiza': 26.00, 
-    'Japón': 26.00, 'Ecuador': 41.00, 'Canadá': 41.00, 'Uruguay': 67.00, 'Senegal': 51.00, 
-    'Costa de Marfil': 51.00, 'Austria': 67.00, 'Croacia': 67.00,
-    'Turquía': float('inf'), 'Escocia': float('inf'), 'Bosnia y Herzegovina': float('inf'), 'Sudáfrica': float('inf')
+    'Francia': 2.25, 'Argentina': 2.75, 'Inglaterra': 4.00, 'España': 4.50, 'Brasil': 4.50, 
+    'Portugal': 7.00, 'Marruecos': 9.00, 'Colombia': 11.00, 'EE. UU.': 13.00, 'México': 15.00, 
+    'Noruega': 15.00, 'Bélgica': 17.00, 'Suiza': 26.00, 'Canadá': 34.00, 'Ecuador': 41.00, 
+    'Senegal': 41.00, 'Croacia': 51.00, 'Paraguay': 67.00, 'Austria': 67.00, 'Costa de Marfil': 67.00, 
+    'Suecia': 67.00, 'Australia': 81.00, 'Egipto': 81.00, 'Argelia': 81.00, 'Ghana': 101.00, 
+    'Bosnia y Herzegovina': 151.00, 'Cabo Verde': 201.00, 'RD Congo': 201.00,
+    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
+    'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'), 'Sudáfrica': float('inf')
 }
 
 cuotas_ganador = {
-    'Francia': 4.00, 'Argentina': 5.00, 'España': 8.00, 'Inglaterra': 8.00, 'Portugal': 12.00, 
-    'Brasil': 13.00, 'Países Bajos': 17.00, 'Alemania': 21.00, 'EE. UU.': 26.00, 'Noruega': 34.00, 
-    'Colombia': 34.00, 'Bélgica': 41.00, 'México': 51.00, 'Japón': 51.00, 'Marruecos': 51.00, 
-    'Suiza': 67.00, 'Uruguay': 101.00, 'Croacia': 101.00, 'Canadá': 101.00, 'Senegal': 101.00, 
-    'Ecuador': 126.00, 'Costa de Marfil': 151.00, 'Austria': 251.00,
-    'Turquía': float('inf'), 'Escocia': float('inf'), 'Bosnia y Herzegovina': float('inf'), 'Sudáfrica': float('inf')
+    'Francia': 3.75, 'Argentina': 4.50, 'España': 8.00, 'Inglaterra': 8.00, 'Brasil': 11.00, 
+    'Portugal': 12.00, 'Marruecos': 21.00, 'EE. UU.': 26.00, 'Noruega': 34.00, 'Colombia': 34.00, 
+    'Bélgica': 41.00, 'México': 51.00, 'Suiza': 67.00, 'Croacia': 101.00, 'Canadá': 101.00, 
+    'Senegal': 101.00, 'Ecuador': 126.00, 'Costa de Marfil': 151.00, 'Paraguay': 201.00, 
+    'Australia': 201.00, 'Suecia': 201.00, 'Austria': 251.00, 'Egipto': 251.00, 'Argelia': 301.00, 
+    'Ghana': 351.00, 'Bosnia y Herzegovina': 501.00, 'Cabo Verde': 501.00, 'RD Congo': 501.00,
+    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
+    'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'), 'Sudáfrica': float('inf')
 }
 
 # --- CÓMPUTO MATEMÁTICO NO ACUMULATIVO ---
@@ -122,11 +141,11 @@ probabilidades_fase_maxima = {}
 for eq in todos_equipos:
     n = traduccion_interna.get(eq, eq)
     
-    p_oct = 1 / float(cuotas_octavos[n]) if cuotas_octavos[n] != float('inf') else 0.0
-    p_cua = 1 / float(cuotas_cuartos[n]) if cuotas_cuartos[n] != float('inf') else 0.0
-    p_sem = 1 / float(cuotas_semis[n]) if cuotas_semis[n] != float('inf') else 0.0
-    p_fin = 1 / float(cuotas_final[n]) if cuotas_final[n] != float('inf') else 0.0
-    p_gan = 1 / float(cuotas_ganador[n]) if cuotas_ganador[n] != float('inf') else 0.0
+    p_oct = 1 / float(cuotas_octavos.get(n, float('inf'))) if cuotas_octavos.get(n, float('inf')) != float('inf') else 0.0
+    p_cua = 1 / float(cuotas_cuartos.get(n, float('inf'))) if cuotas_cuartos.get(n, float('inf')) != float('inf') else 0.0
+    p_sem = 1 / float(cuotas_semis.get(n, float('inf'))) if cuotas_semis.get(n, float('inf')) != float('inf') else 0.0
+    p_fin = 1 / float(cuotas_final.get(n, float('inf'))) if cuotas_final.get(n, float('inf')) != float('inf') else 0.0
+    p_gan = 1 / float(cuotas_ganador.get(n, float('inf'))) if cuotas_ganador.get(n, float('inf')) != float('inf') else 0.0
 
     p_exacta_oct = max(0.0, p_oct - p_cua)
     p_exacta_cua = max(0.0, p_cua - p_sem)
@@ -137,16 +156,18 @@ for eq in todos_equipos:
     puntos_esperados = (10 * p_exacta_oct) + (12 * p_exacta_cua) + (15 * p_exacta_sem) + (18 * p_exacta_fin) + (20 * p_exacta_gan)
     probabilidades_fase_maxima[eq] = puntos_esperados
 
-# Filas calculadas para HOY (29/06)
+# Filas calculadas para HOY (30/06)
 filas_hoy = []
 for jugador, equipos in porra.items():
     puntos_selecciones = sum([probabilidades_fase_maxima.get(e, 0.0) for e in equipos])
-    puntos_totales = puntos_selecciones + puntos_futbolistas_actuales.get(jugador, 0)
+    # Suma: Puntos Selecciones + Puntos Goles + Puntos de la Apuesta Extra
+    puntos_totales = puntos_selecciones + puntos_futbolistas_actuales.get(jugador, 0) + puntos_apuesta.get(jugador, 0)
     filas_hoy.append({
-        "Fecha": "29/06",
+        "Fecha": "30/06",
         "Jugador": jugador,
         "Equipos": ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos]),
         "Futbolistas": ", ".join([f"{f} ({pts})" for f, pts in porra_futbolistas.get(jugador, {}).items()]),
+        "Puntos Apuesta": puntos_apuesta.get(jugador, 0),
         "Puntos Esperados": round(puntos_totales, 2)
     })
 
@@ -154,8 +175,9 @@ df_hoy = pd.DataFrame(filas_hoy)
 total_puntos_global = df_hoy["Puntos Esperados"].sum()
 df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos_global if total_puntos_global > 0 else 1)) * 100, 2)
 
-# --- HISTORIAL CRONOLÓGICO FIEL (INCLUYE EL 25/06 DE TU CAPTURA) ---
-datos_22_junio = [
+# --- HISTORIAL CRONOLÓGICO CONGELADO FIEL ---
+datos_historicos = [
+    # 22/06
     {"Fecha": "22/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.34},
     {"Fecha": "22/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.99},
     {"Fecha": "22/06", "Jugador": "Sierra", "Probabilidad (%)": 13.06},
@@ -163,10 +185,8 @@ datos_22_junio = [
     {"Fecha": "22/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.87},
     {"Fecha": "22/06", "Jugador": "Telenti", "Probabilidad (%)": 12.21},
     {"Fecha": "22/06", "Jugador": "Juan", "Probabilidad (%)": 10.31},
-    {"Fecha": "22/06", "Jugador": "Vecina", "Probabilidad (%)": 10.20}
-]
-
-datos_23_junio = [
+    {"Fecha": "22/06", "Jugador": "Vecina", "Probabilidad (%)": 10.20},
+    # 23/06
     {"Fecha": "23/06", "Jugador": "Joaquín", "Probabilidad (%)": 15.08},
     {"Fecha": "23/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.77},
     {"Fecha": "23/06", "Jugador": "Sierra", "Probabilidad (%)": 12.64},
@@ -174,10 +194,8 @@ datos_23_junio = [
     {"Fecha": "23/06", "Jugador": "Telenti", "Probabilidad (%)": 12.44},
     {"Fecha": "23/06", "Jugador": "Mírete", "Probabilidad (%)": 12.10},
     {"Fecha": "23/06", "Jugador": "Juan", "Probabilidad (%)": 10.74},
-    {"Fecha": "23/06", "Jugador": "Vecina", "Probabilidad (%)": 9.73}
-]
-
-datos_24_junio = [
+    {"Fecha": "23/06", "Jugador": "Vecina", "Probabilidad (%)": 9.73},
+    # 24/06
     {"Fecha": "24/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.87},
     {"Fecha": "24/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.42},
     {"Fecha": "24/06", "Jugador": "Sierra", "Probabilidad (%)": 12.75},
@@ -185,11 +203,8 @@ datos_24_junio = [
     {"Fecha": "24/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.35},
     {"Fecha": "24/06", "Jugador": "Telenti", "Probabilidad (%)": 12.11},
     {"Fecha": "24/06", "Jugador": "Juan", "Probabilidad (%)": 11.40},
-    {"Fecha": "24/06", "Jugador": "Vecina", "Probabilidad (%)": 9.42}
-]
-
-# Datos extraídos fielmente de tu captura image_bd0675.png
-datos_25_junio = [
+    {"Fecha": "24/06", "Jugador": "Vecina", "Probabilidad (%)": 9.42},
+    # 25/06
     {"Fecha": "25/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.88},
     {"Fecha": "25/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.60},
     {"Fecha": "25/06", "Jugador": "Sierra", "Probabilidad (%)": 12.86},
@@ -197,24 +212,28 @@ datos_25_junio = [
     {"Fecha": "25/06", "Jugador": "Telenti", "Probabilidad (%)": 12.22},
     {"Fecha": "25/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.11},
     {"Fecha": "25/06", "Jugador": "Juan", "Probabilidad (%)": 11.42},
-    {"Fecha": "25/06", "Jugador": "Vecina", "Probabilidad (%)": 9.32}
+    {"Fecha": "25/06", "Jugador": "Vecina", "Probabilidad (%)": 9.32},
+    # 29/06 (Fieles a la captura image_581019.png)
+    {"Fecha": "29/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.99},
+    {"Fecha": "29/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.56},
+    {"Fecha": "29/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.69},
+    {"Fecha": "29/06", "Jugador": "Mírete", "Probabilidad (%)": 12.65},
+    {"Fecha": "29/06", "Jugador": "Sierra", "Probabilidad (%)": 12.47},
+    {"Fecha": "29/06", "Jugador": "Telenti", "Probabilidad (%)": 12.09},
+    {"Fecha": "29/06", "Jugador": "Vecina", "Probabilidad (%)": 10.74},
+    {"Fecha": "29/06", "Jugador": "Juan", "Probabilidad (%)": 9.81}
 ]
 
-df_22 = pd.DataFrame(datos_22_junio)
-df_23 = pd.DataFrame(datos_23_junio)
-df_24 = pd.DataFrame(datos_24_junio)
-df_25 = pd.DataFrame(datos_25_junio)
-df_29 = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]].copy()
-
-# Unión de toda la línea temporal completa
-df_historial_completo = pd.concat([df_22, df_23, df_24, df_25, df_29], ignore_index=True)
+df_hist_previo = pd.DataFrame(datos_historicos)
+df_30 = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]].copy()
+df_historial_completo = pd.concat([df_hist_previo, df_30], ignore_index=True)
 
 # --- RENDERIZADO INTERFAZ STREAMLIT ---
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
-    st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 29/06)")
-    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Esperados", "Probabilidad (%)"]]
+    st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 30/06)")
+    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
 with col2:
@@ -231,11 +250,10 @@ fig_lineas = px.line(
     y="Probabilidad (%)", 
     color="Jugador", 
     markers=True,
-    category_orders={"Fecha": ["22/06", "23/06", "24/06", "25/06", "29/06"]}
+    category_orders={"Fecha": ["22/06", "23/06", "24/06", "25/06", "29/06", "30/06"]}
 )
 fig_lineas.update_layout(xaxis_title="Fecha de Actualización", yaxis_title="Probabilidad de Victoria (%)")
 st.plotly_chart(fig_lineas, use_container_width=True)
-
 
 import streamlit as st
 import random

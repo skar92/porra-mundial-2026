@@ -51,8 +51,8 @@ puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos,
 
 # --- PUNTOS GANADOS EN APUESTA MESA ---
 puntos_apuesta = {
-    'Sierra': 0, 'Joaquín': 0, 'Ejkar': -1, 'Vecina': 0,
-    'Telenti': 0, 'Miguel Ángel': 0, 'Mírete': 1, 'Juan': 0
+    'Sierra': 0, 'Joaquín': +1, 'Ejkar': -1, 'Vecina': 0,
+    'Telenti': +1, 'Miguel Ángel': -1, 'Mírete': 1, 'Juan': -1
 }
 
 traduccion_interna = {

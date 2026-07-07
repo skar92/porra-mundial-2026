@@ -98,7 +98,6 @@ banderas = {
 equipos_eliminados_octavos = ['Canadá', 'Paraguay', 'Brasil', 'México', 'Portugal', 'EE.UU.']
 
 # --- ASIGNACIÓN DE CUOTAS REALES AL 07/07 ---
-# Ponemos en float('inf') las que ya sabemos que han caído eliminadas en octavos
 cuotas_octavos = {
     'Francia': 1.00, 'España': 1.00, 'Inglaterra': 1.00, 'Noruega': 1.00, 'Bélgica': 1.00, 
     'Marruecos': 1.00, 'Argentina': 1.00, 'Colombia': 1.00, 'Suiza': 1.00, 'Alemania': 1.00,
@@ -138,15 +137,12 @@ max_posibles = {}
 
 for jugador, equipos in porra.items():
     pts_min_selecciones = 0
-    
     for eq in equipos:
         n = traduccion_interna.get(eq, eq)
         if cuotas_octavos.get(n, float('inf')) == float('inf'):
-            pts_fijos = 10 if n in equipos_eliminados_octavos else 0
+            pts_min_selecciones += 10 if n in equipos_eliminados_octavos else 0
         else:
-            pts_fijos = 12 if cuotas_cuartos.get(n) == 1.0 else 10
-            
-        pts_min_selecciones += pts_fijos
+            pts_min_selecciones += 12 if cuotas_cuartos.get(n) == 1.0 else 10
 
     tiene_futbolista_vivo = False
     for fut in porra_futbolistas[jugador].keys():
@@ -161,7 +157,7 @@ for jugador, equipos in porra.items():
 max_de_los_minimos = max(min_garantizados.values())
 jugadores_vivos = [j for j in porra.keys() if max_posibles[j] >= max_de_los_minimos]
 
-# --- CÁLCULO DE PUNTOS ESPERADOS CORREGIDO ---
+# --- CÁLCULO DE PUNTOS ESPERADOS (VIVOS + ELIMINADOS EN OCTAVOS) ---
 todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
 probabilidades_fase_maxima = {}
 
@@ -169,6 +165,7 @@ for eq in todos_equipos:
     n = traduccion_interna.get(eq, eq)
     
     if cuotas_octavos.get(n, float('inf')) == float('inf'):
+        # Si está eliminado, aporta sus 10 puntos si llegó a octavos, o 0 si cayó antes.
         probabilidades_fase_maxima[eq] = 10.0 if n in equipos_eliminados_octavos else 0.0
         continue
     
@@ -214,82 +211,15 @@ for jugador, equipos in porra.items():
 
 df_hoy = pd.DataFrame(filas_hoy)
 
-# --- SERIE HISTÓRICA CONSOLIDADA ---
-datos_historicos = [
-    {"Fecha": "22/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.34},
-    {"Fecha": "22/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.99},
-    {"Fecha": "22/06", "Jugador": "Sierra", "Probabilidad (%)": 13.06},
-    {"Fecha": "22/06", "Jugador": "Mírete", "Probabilidad (%)": 13.02},
-    {"Fecha": "22/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.87},
-    {"Fecha": "22/06", "Jugador": "Telenti", "Probabilidad (%)": 12.21},
-    {"Fecha": "22/06", "Jugador": "Juan", "Probabilidad (%)": 10.31},
-    {"Fecha": "22/06", "Jugador": "Vecina", "Probabilidad (%)": 10.20},
-    
-    {"Fecha": "23/06", "Jugador": "Joaquín", "Probabilidad (%)": 15.08},
-    {"Fecha": "23/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.77},
-    {"Fecha": "23/06", "Jugador": "Sierra", "Probabilidad (%)": 12.64},
-    {"Fecha": "23/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.50},
-    {"Fecha": "23/06", "Jugador": "Telenti", "Probabilidad (%)": 12.44},
-    {"Fecha": "23/06", "Jugador": "Mírete", "Probabilidad (%)": 12.10},
-    {"Fecha": "23/06", "Jugador": "Juan", "Probabilidad (%)": 10.74},
-    {"Fecha": "23/06", "Jugador": "Vecina", "Probabilidad (%)": 9.73},
-    
-    {"Fecha": "24/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.87},
-    {"Fecha": "24/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.42},
-    {"Fecha": "24/06", "Jugador": "Sierra", "Probabilidad (%)": 12.75},
-    {"Fecha": "24/06", "Jugador": "Mírete", "Probabilidad (%)": 12.68},
-    {"Fecha": "24/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.35},
-    {"Fecha": "24/06", "Jugador": "Telenti", "Probabilidad (%)": 12.11},
-    {"Fecha": "24/06", "Jugador": "Juan", "Probabilidad (%)": 11.40},
-    {"Fecha": "24/06", "Jugador": "Vecina", "Probabilidad (%)": 9.42},
-    
-    {"Fecha": "25/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.88},
-    {"Fecha": "25/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.60},
-    {"Fecha": "25/06", "Jugador": "Sierra", "Probabilidad (%)": 12.86},
-    {"Fecha": "25/06", "Jugador": "Mírete", "Probabilidad (%)": 12.59},
-    {"Fecha": "25/06", "Jugador": "Telenti", "Probabilidad (%)": 12.22},
-    {"Fecha": "25/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.11},
-    {"Fecha": "25/06", "Jugador": "Juan", "Probabilidad (%)": 11.42},
-    {"Fecha": "25/06", "Jugador": "Vecina", "Probabilidad (%)": 9.32},
-    
-    {"Fecha": "29/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 14.99},
-    {"Fecha": "29/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.56},
-    {"Fecha": "29/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.69},
-    {"Fecha": "29/06", "Jugador": "Mírete", "Probabilidad (%)": 12.65},
-    {"Fecha": "29/06", "Jugador": "Sierra", "Probabilidad (%)": 12.47},
-    {"Fecha": "29/06", "Jugador": "Telenti", "Probabilidad (%)": 12.09},
-    {"Fecha": "29/06", "Jugador": "Vecina", "Probabilidad (%)": 10.74},
-    {"Fecha": "29/06", "Jugador": "Juan", "Probabilidad (%)": 9.81},
-    
-    {"Fecha": "30/06", "Jugador": "Joaquín", "Probabilidad (%)": 18.84},
-    {"Fecha": "30/06", "Jugador": "Telenti", "Probabilidad (%)": 13.33},
-    {"Fecha": "30/06", "Jugador": "Sierra", "Probabilidad (%)": 12.98},
-    {"Fecha": "30/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 11.86},
-    {"Fecha": "30/06", "Jugador": "Juan", "Probabilidad (%)": 11.46},
-    {"Fecha": "30/06", "Jugador": "Vecina", "Probabilidad (%)": 11.22},
-    {"Fecha": "30/06", "Jugador": "Ejkar", "Probabilidad (%)": 11.20},
-    {"Fecha": "30/06", "Jugador": "Mírete", "Probabilidad (%)": 9.09},
-
-    {"Fecha": "02/07", "Jugador": "Joaquín", "Probabilidad (%)": 21.22},
-    {"Fecha": "02/07", "Jugador": "Sierra", "Probabilidad (%)": 14.47},
-    {"Fecha": "02/07", "Jugador": "Telenti", "Probabilidad (%)": 13.51},
-    {"Fecha": "02/07", "Jugador": "Juan", "Probabilidad (%)": 11.28},
-    {"Fecha": "02/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 11.02},
-    {"Fecha": "02/07", "Jugador": "Vecina", "Probabilidad (%)": 10.23},
-    {"Fecha": "02/07", "Jugador": "Ejkar", "Probabilidad (%)": 9.98},
-    {"Fecha": "02/07", "Jugador": "Mírete", "Probabilidad (%)": 8.29}
-]
-
-df_hist_previo = pd.DataFrame(datos_historicos)
-df_hoy_linea = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]].copy()
-df_historial_completo = pd.concat([df_hist_previo, df_hoy_linea], ignore_index=True)
-
 # --- VISUALIZACIÓN EN STREAMLIT ---
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
     st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 07/07)")
-    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"]]
+    # Ordenamos directamente por los Puntos Esperados recalculados
+    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[[
+        "Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"
+    ]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
 with col2:
@@ -300,17 +230,31 @@ with col2:
 st.markdown("---")
 st.subheader("⏳ Evolución Temporal de la Porra")
 
+datos_historicos = [
+    {"Fecha": "22/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.34}, {"Fecha": "22/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.99},
+    {"Fecha": "22/06", "Jugador": "Sierra", "Probabilidad (%)": 13.06}, {"Fecha": "22/06", "Jugador": "Mírete", "Probabilidad (%)": 13.02},
+    {"Fecha": "22/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.87}, {"Fecha": "22/06", "Jugador": "Telenti", "Probabilidad (%)": 12.21},
+    {"Fecha": "22/06", "Jugador": "Juan", "Probabilidad (%)": 10.31}, {"Fecha": "22/06", "Jugador": "Vecina", "Probabilidad (%)": 10.20},
+    {"Fecha": "02/07", "Jugador": "Joaquín", "Probabilidad (%)": 21.22}, {"Fecha": "02/07", "Jugador": "Sierra", "Probabilidad (%)": 14.47},
+    {"Fecha": "02/07", "Jugador": "Telenti", "Probabilidad (%)": 13.51}, {"Fecha": "02/07", "Jugador": "Juan", "Probabilidad (%)": 11.28},
+    {"Fecha": "02/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 11.02}, {"Fecha": "02/07", "Jugador": "Vecina", "Probabilidad (%)": 10.23},
+    {"Fecha": "02/07", "Jugador": "Ejkar", "Probabilidad (%)": 9.98}, {"Fecha": "02/07", "Jugador": "Mírete", "Probabilidad (%)": 8.29}
+]
+
+df_hist_previo = pd.DataFrame(datos_historicos)
+df_hoy_linea = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]].copy()
+df_historial_completo = pd.concat([df_hist_previo, df_hoy_linea], ignore_index=True)
+
 fig_lineas = px.line(
     df_historial_completo, 
     x="Fecha", 
     y="Probabilidad (%)", 
     color="Jugador", 
     markers=True,
-    category_orders={"Fecha": ["22/06", "23/06", "24/06", "25/06", "29/06", "30/06", "02/07", "07/07"]}
+    category_orders={"Fecha": ["22/06", "02/07", "07/07"]}
 )
 fig_lineas.update_layout(xaxis_title="Fecha de Actualización", yaxis_title="Probabilidad de Victoria (%)")
 st.plotly_chart(fig_lineas, use_container_width=True)
-
 
 
 import streamlit as st

@@ -61,6 +61,7 @@ puntos_apuesta = {
     'Juan': -2          
 }
 
+
 traduccion_interna = {
     'Francia': 'Francia', 'España': 'España', 'Inglaterra': 'Inglaterra', 'Portugal': 'Portugal',
     'Argentina': 'Argentina', 'Brasil': 'Brasil', 'Alemania': 'Alemania', 'Holanda': 'Países Bajos',

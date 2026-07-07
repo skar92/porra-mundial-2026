@@ -87,9 +87,9 @@ cuotas_octavos = {
     'Francia': 1.00, 'Marruecos': 1.00, 'España': 1.00, 'Bélgica': 1.00, 
     'Noruega': 1.00, 'Inglaterra': 1.00, 'Argentina': 1.00, 'Suiza': 1.00, 'Colombia': 1.00,
     'Canadá': 1.00, 'Paraguay': 1.00, 'EE. UU.': 1.00, 'Portugal': 1.00, 
-    'Brasil': 1.00, 'México': 1.00, 'Egipto': 1.00, 'Croacia': 1.00,
+    'Brasil': 1.00, 'México': 1.00, 'Egipto': 1.00, 
     # Eliminados en grupos
-    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
+    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 'Croacia': float('inf')
     'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'), 
     'Senegal': float('inf'), 'Ecuador': float('inf'), 'Costa de Marfil': float('inf'), 
     'Bosnia y Herzegovina': float('inf'), 'Austria': float('inf'), 'Cabo Verde': float('inf')

@@ -94,26 +94,19 @@ banderas = {
     'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦', 'Paraguay': '🇵🇾'
 }
 
-# --- LISTA REAL DE ELIMINADOS EN OCTAVOS ---
+# --- LISTA INDISCUTIBLE DE ELIMINADOS EN OCTAVOS ---
 equipos_eliminados_octavos = ['Canadá', 'Paraguay', 'Brasil', 'México', 'Portugal', 'EE.UU.']
 
-# --- ASIGNACIÓN DE CUOTAS REALES AL 07/07 ---
-cuotas_octavos = {
-    'Francia': 1.00, 'España': 1.00, 'Inglaterra': 1.00, 'Noruega': 1.00, 'Bélgica': 1.00, 
-    'Marruecos': 1.00, 'Argentina': 1.00, 'Colombia': 1.00, 'Suiza': 1.00, 'Alemania': 1.00,
-    'Uruguay': 1.00, 'Holanda': 1.00,
-    'Portugal': float('inf'), 'Brasil': float('inf'), 'México': float('inf'), 
-    'EE.UU.': float('inf'), 'Canadá': float('inf'), 'Paraguay': float('inf')
-}
+# --- SELECCIONES QUE SIGUEN VIVAS EN EL TORNEO (O CLASIFICADAS A CUARTOS) ---
+equipos_vivos = [
+    'Francia', 'España', 'Inglaterra', 'Noruega', 'Bélgica', 'Marruecos', 
+    'Argentina', 'Colombia', 'Suiza', 'Alemania', 'Uruguay', 'Holanda'
+]
 
+# --- CUOTAS REVOLUCIONADAS (FASES ACTIVAS) ---
 cuotas_cuartos = {
     'Francia': 1.00, 'España': 1.00, 'Inglaterra': 1.00, 'Noruega': 1.00, 'Bélgica': 1.00, 'Marruecos': 1.00,
-    'Argentina': 1.125,   
-    'Colombia': 1.615,   
-    'Suiza': 2.30,
-    'Alemania': 1.50,
-    'Uruguay': 1.80,
-    'Holanda': 2.10
+    'Argentina': 1.125, 'Colombia': 1.615, 'Suiza': 2.30, 'Alemania': 1.50, 'Uruguay': 1.80, 'Holanda': 2.10
 }
 
 cuotas_semis = {
@@ -131,74 +124,54 @@ cuotas_ganador = {
     'Bélgica': 26.00, 'Colombia': 26.00, 'Marruecos': 29.00, 'Suiza': 67.00
 }
 
-# --- CONTROL MATEMÁTICO REAL DE ELIMINACIÓN ---
-min_garantizados = {}
-max_posibles = {}
-
-for jugador, equipos in porra.items():
-    pts_min_selecciones = 0
-    for eq in equipos:
-        n = traduccion_interna.get(eq, eq)
-        if cuotas_octavos.get(n, float('inf')) == float('inf'):
-            pts_min_selecciones += 10 if n in equipos_eliminados_octavos else 0
-        else:
-            pts_min_selecciones += 12 if cuotas_cuartos.get(n) == 1.0 else 10
-
-    tiene_futbolista_vivo = False
-    for fut in porra_futbolistas[jugador].keys():
-        sel_fut = futbolista_seleccion.get(fut)
-        sel_fut_trad = traduccion_interna.get(sel_fut, sel_fut)
-        if cuotas_octavos.get(sel_fut_trad, float('inf')) != float('inf'):
-            tiene_futbolista_vivo = True
-
-    min_garantizados[jugador] = pts_min_selecciones + puntos_futbolistas_actuales.get(jugador, 0) + puntos_apuesta.get(jugador, 0)
-    max_posibles[jugador] = float('inf') if tiene_futbolista_vivo else min_garantizados[jugador]
-
-max_de_los_minimos = max(min_garantizados.values())
-jugadores_vivos = [j for j in porra.keys() if max_posibles[j] >= max_de_los_minimos]
-
-# --- CÁLCULO DE PUNTOS ESPERADOS (VIVOS + ELIMINADOS EN OCTAVOS) ---
-todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
+# --- NUEVA LÓGICA DE PUNTOS ESPERADOS POR EQUIPO ---
 probabilidades_fase_maxima = {}
+todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
 
 for eq in todos_equipos:
     n = traduccion_interna.get(eq, eq)
     
-    if cuotas_octavos.get(n, float('inf')) == float('inf'):
-        # Si está eliminado, aporta sus 10 puntos si llegó a octavos, o 0 si cayó antes.
-        probabilidades_fase_maxima[eq] = 10.0 if n in equipos_eliminados_octavos else 0.0
-        continue
+    # CASO 1: Ya eliminado en octavos -> 10 puntos reales fijos
+    if n in equipos_eliminados_octavos:
+        probabilidades_fase_maxima[eq] = 10.0
     
-    p_oct = 1 / float(cuotas_octavos.get(n, 1.0))
-    p_cua = 1 / float(cuotas_cuartos.get(n, float('inf'))) if cuotas_cuartos.get(n, float('inf')) != float('inf') else 0.0
-    p_sem = 1 / float(cuotas_semis.get(n, float('inf'))) if cuotas_semis.get(n, float('inf')) != float('inf') else 0.0
-    p_fin = 1 / float(cuotas_final.get(n, float('inf'))) if cuotas_final.get(n, float('inf')) != float('inf') else 0.0
-    p_gan = 1 / float(cuotas_ganador.get(n, float('inf'))) if cuotas_ganador.get(n, float('inf')) != float('inf') else 0.0
+    # CASO 2: Sigue vivo -> Calculamos proyección según sus cuotas de mercado
+    elif n in equipos_vivos:
+        # Probabilidades implícitas de mercado para las fases restantes
+        p_cua = 1 / float(cuotas_cuartos.get(n, float('inf')))
+        p_sem = 1 / float(cuotas_semis.get(n, float('inf')))
+        p_fin = 1 / float(cuotas_final.get(n, float('inf')))
+        p_gan = 1 / float(cuotas_ganador.get(n, float('inf')))
+        
+        # Distribución de probabilidad exacta para cada hito final alcanzable
+        p_exacta_oct = max(0.0, 1.0 - p_cua)  # Probabilidad de caer exactamente en Octavos
+        p_exacta_cua = max(0.0, p_cua - p_sem) # Probabilidad de caer exactamente en Cuartos
+        p_exacta_sem = max(0.0, p_sem - p_fin) # Probabilidad de caer exactamente en Semifinales
+        p_exacta_fin = max(0.0, p_fin - p_gan) # Probabilidad de quedar subcampeón
+        p_exacta_gan = p_gan                    # Probabilidad de ser Campeón
+        
+        # Suma ponderada del valor de los puntos esperados
+        puntos_esperados = (10 * p_exacta_oct) + (12 * p_exacta_cua) + (15 * p_exacta_sem) + (18 * p_exacta_fin) + (20 * p_exacta_gan)
+        probabilidades_fase_maxima[eq] = puntos_esperados
+        
+    # CASO 3: Eliminado en fase de grupos -> 0 puntos
+    else:
+        probabilidades_fase_maxima[eq] = 0.0
 
-    p_exacta_oct = max(0.0, p_oct - p_cua)
-    p_exacta_cua = max(0.0, p_cua - p_sem)
-    p_exacta_sem = max(0.0, p_sem - p_fin)
-    p_exacta_fin = max(0.0, p_fin - p_gan)
-    p_exacta_gan = p_gan
-
-    puntos_esperados = (10 * p_exacta_oct) + (12 * p_exacta_cua) + (15 * p_exacta_sem) + (18 * p_exacta_fin) + (20 * p_exacta_gan)
-    probabilidades_fase_maxima[eq] = puntos_esperados
-
+# --- ASIGNACIÓN GLOBAL A JUGADORES ---
 puntos_esperados_dict = {}
 for jugador, equipos in porra.items():
     puntos_selecciones = sum([probabilidades_fase_maxima.get(e, 0.0) for e in equipos])
     puntos_totales = puntos_selecciones + puntos_futbolistas_actuales.get(jugador, 0) + puntos_apuesta.get(jugador, 0)
     puntos_esperados_dict[jugador] = puntos_totales
 
-total_puntos_vivos = sum([puntos_esperados_dict[j] for j in jugadores_vivos])
+# Totalización para el cálculo del reparto del pastel (%)
+total_puntos_esperados = sum(puntos_esperados_dict.values())
 
 filas_hoy = []
 for jugador, equipos in porra.items():
-    if jugador in jugadores_vivos and total_puntos_vivos > 0:
-        prob_porcentaje = round((puntos_esperados_dict[jugador] / total_puntos_vivos) * 100, 2)
-    else:
-        prob_porcentaje = 0.00  
-        
+    prob_porcentaje = round((puntos_esperados_dict[jugador] / total_puntos_esperados) * 100, 2) if total_puntos_esperados > 0 else 0.0
+    
     filas_hoy.append({
         "Fecha": "07/07",
         "Jugador": jugador,
@@ -216,7 +189,6 @@ col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
     st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 07/07)")
-    # Ordenamos directamente por los Puntos Esperados recalculados
     df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[[
         "Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"
     ]]

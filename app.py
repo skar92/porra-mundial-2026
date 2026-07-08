@@ -234,7 +234,7 @@ df_historial_completo = pd.concat([df_hist_previo, df_hoy_linea], ignore_index=T
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
-    st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 07/07)")
+    st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 08/07)")
     df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
@@ -252,7 +252,7 @@ fig_lineas = px.line(
     y="Probabilidad (%)", 
     color="Jugador", 
     markers=True,
-    category_orders={"Fecha": ["22/06", "02/07", "07/07"]}
+    category_orders={"Fecha": ["22/06", "02/07", "08/07"]}
 )
 fig_lineas.update_layout(xaxis_title="Fecha de Actualización", yaxis_title="Probabilidad de Victoria (%)")
 st.plotly_chart(fig_lineas, use_container_width=True)

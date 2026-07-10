@@ -43,7 +43,7 @@ porra_futbolistas = {
     'Telenti': {'Endrick': 0, 'Ramos': 1},
     'Miguel Ángel': {'Haaland': 7, 'Embolo': 2},
     'Mírete': {'Oyarzabal': 2, 'El Bicho': 3}, 
-    'Juan': {'Mbappé': 7, 'Vinicius': 4}
+    'Juan': {'Mbappé': 8, 'Vinicius': 4}
 }
 
 puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos, dict) else 0 
@@ -111,16 +111,15 @@ cuotas_cuartos = {
 
 # --- CUOTAS SEMIFINALES REALES (Fórmula: Fracción + 1) ---
 cuotas_semis = {
-    'Francia': (1/4) + 1,       
+    'Francia':  1,       
     'España': (3/10) + 1,        
     'Inglaterra': (4/9) + 1,      
-    'Argentina': (1/3) + 1,       
+    'Argentina': (3/10) + 1,       
     'Noruega': (7/4) + 1,         
     'Bélgica': (5/2) + 1,         
-    'Marruecos': 3.00 + 1,      
-    'Suiza': (12/5) + 1,            
+    'Suiza': (5/2) + 1,            
     # Eliminados
-    'Colombia': float('inf'),'Canadá': float('inf'), 'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 
+    'Marruecos': float('inf'), 'Colombia': float('inf'),'Canadá': float('inf'), 'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 
     'Brasil': float('inf'), 'México': float('inf'), 'Egipto': float('inf'), 'Croacia': float('inf'),
     'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
     'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'),
@@ -130,16 +129,15 @@ cuotas_semis = {
 
 # --- CUOTAS FINALISTAS REALES (Fórmula: Fracción + 1) ---
 cuotas_final = {
-    'Francia': (10/11) + 1,       
-    'Argentina': (5/4) + 1,      
-    'Inglaterra': (8/5) + 1,      
-    'España': (13/8) + 1,         
-    'Noruega': (9/2) + 1,          
-    'Marruecos': 10 + 1,        
-    'Bélgica': 11 + 1,          
+    'Francia': (8/15) + 1,       
+    'Argentina': (11/8) + 1,      
+    'Inglaterra': (13/8) + 1,      
+    'España': 2 + 1,         
+    'Noruega': 5 + 1,          
+    'Bélgica': 12 + 1,          
     'Suiza': 9.00 + 1,           
     # Eliminados
-    'Colombia': float('inf'),'Canadá': float('inf'), 'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 
+    'Marruecos': float('inf'),'Colombia': float('inf'),'Canadá': float('inf'), 'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 
     'Brasil': float('inf'), 'México': float('inf'), 'Egipto': float('inf'), 'Croacia': float('inf'),
     'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
     'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'),
@@ -149,16 +147,15 @@ cuotas_final = {
 
 # --- CUOTAS GANADOR DEL TORNEO REALES ---
 cuotas_ganador = {
-    'Francia': (15/18) + 1,        
-    'España': 1+ (7/2) ,          
-    'Argentina': 1+4,        
-    'Inglaterra': 1+5,       
+    'Francia': (6/4) + 1,        
+    'España': 1+ (9/2) ,          
+    'Argentina': 1+(9/2),        
+    'Inglaterra': 1+(9/2),       
     'Noruega': 1+16,                 
     'Bélgica': 1+33,         
-    'Marruecos': 1+33,       
     'Suiza': 1+33,           
     # Eliminados
-    'Colombia': float('inf'), 'Canadá': float('inf'), 'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 
+    'Marruecos': float('inf'),'Colombia': float('inf'), 'Canadá': float('inf'), 'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 
     'Brasil': float('inf'), 'México': float('inf'), 'Egipto': float('inf'), 'Croacia': float('inf'),
     'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
     'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'),
@@ -234,7 +231,7 @@ df_historial_completo = pd.concat([df_hist_previo, df_hoy_linea], ignore_index=T
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
-    st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 08/07)")
+    st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 10/07)")
     df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 

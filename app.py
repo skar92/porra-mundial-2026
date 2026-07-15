@@ -51,11 +51,11 @@ puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos,
 
 # --- PUNTOS GANADOS EN APUESTA MESA ACTUALIZADOS ---
 puntos_apuesta = {
-    'Sierra': 0, 
+    'Sierra': 2, 
     'Joaquín': 2,       
     'Ejkar': 1,         
     'Vecina': -2,       
-    'Telenti': 3,       
+    'Telenti': 1,       
     'Miguel Ángel': -1, 
     'Mírete': -1,       
     'Juan': -2          
@@ -227,14 +227,14 @@ datos_historicos = [
     {"Fecha": "10/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28},
 
         # Datos extraídos de la captura (11/07)
-    {"Fecha": "10/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.86},
-    {"Fecha": "10/07", "Jugador": "Telenti", "Probabilidad (%)": 15.86},
-    {"Fecha": "10/07", "Jugador": "Sierra", "Probabilidad (%)": 16.17},
-    {"Fecha": "10/07", "Jugador": "Ejkar", "Probabilidad (%)": 12.34},
-    {"Fecha": "10/07", "Jugador": "Vecina", "Probabilidad (%)": 10.77},
-    {"Fecha": "10/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.74},
-    {"Fecha": "10/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
-    {"Fecha": "10/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28}
+    {"Fecha": "11/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.86},
+    {"Fecha": "11/07", "Jugador": "Telenti", "Probabilidad (%)": 15.86},
+    {"Fecha": "11/07", "Jugador": "Sierra", "Probabilidad (%)": 16.17},
+    {"Fecha": "11/07", "Jugador": "Ejkar", "Probabilidad (%)": 12.34},
+    {"Fecha": "11/07", "Jugador": "Vecina", "Probabilidad (%)": 10.77},
+    {"Fecha": "11/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.74},
+    {"Fecha": "11/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
+    {"Fecha": "11/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28}
 ]
 
 df_hist_previo = pd.DataFrame(datos_historicos)

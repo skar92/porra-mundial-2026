@@ -35,7 +35,7 @@ porra = {
 
 # --- GOLES DE FUTBOLISTAS ACTUALIZADOS ---
 porra_futbolistas = {
-    'Sierra': {'Kane': 6, 'Julián Álvarez': 0},
+    'Sierra': {'Kane': 6, 'Julián Álvarez':1},
     'Joaquín': {'Messi': 8, 'Olise': 0},
     'Ejkar': {'Lautaro': 1, 'Raphinha': 0},
     'Vecina': {'Havertz': 3, 'Lamine Yamal': 1},

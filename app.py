@@ -8,7 +8,6 @@ import csv
 # Configuración de la interfaz de Streamlit
 st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
 st.title("🏆 Seguimiento y Evolución de la Porra (Modelo No Acumulativo)")
-st.write(f"Última actualización de cuotas reales: {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
 FILE_GANADORES = "ganadores_sopa.csv"
 
@@ -245,7 +244,7 @@ df_historial_completo = pd.concat([df_hist_previo, df_hoy_linea], ignore_index=T
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
-    st.subheader("📊 Tabla de Clasificación de la Porra (Hoy - 11/07)")
+    st.subheader("📊 Tabla de Clasificación de la Porra (15/07)")
     df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 

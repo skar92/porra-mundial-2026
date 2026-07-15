@@ -184,7 +184,7 @@ for jugador, equipos in porra.items():
     puntos_selecciones = sum([probabilidades_fase_maxima.get(e, 0.0) for e in equipos])
     puntos_totales = puntos_selecciones + puntos_futbolistas_actuales.get(jugador, 0) + puntos_apuesta.get(jugador, 0)
     filas_hoy.append({
-        "Fecha": "11/07",
+        "Fecha": "15/07",
         "Jugador": jugador,
         "Equipos": ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos]),
         "Futbolistas": ", ".join([f"{f} ({pts})" for f, pts in porra_futbolistas.get(jugador, {}).items()]),

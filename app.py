@@ -42,7 +42,7 @@ porra_futbolistas = {
     'Vecina': {'Havertz': 3, 'Lamine Yamal': 1},
     'Telenti': {'Endrick': 0, 'Ramos': 1},
     'Miguel Ángel': {'Haaland': 7, 'Embolo': 2},
-    'Mírete': {'Oyarzabal': 2, 'El Bicho': 3}, 
+    'Mírete': {'Oyarzabal':3, 'El Bicho': 3}, 
     'Juan': {'Mbappé': 8, 'Vinicius': 4}
 }
 
@@ -109,10 +109,10 @@ cuotas_cuartos = {
 cuotas_semis = {
     'Francia': 1.00,          
     'España': 1.00,           
-    'Argentina': (3/10) + 1,      
-    'Inglaterra': (1/2) + 1,      
-    'Noruega': (13/8) + 1,        
-    'Suiza': (5/2) + 1,           
+    'Argentina': 1,      
+    'Inglaterra': 1,      
+    'Noruega':  float('inf'),        
+    'Suiza':  float('inf'),           
     # Eliminados (incluida Bélgica)
     'Bélgica': float('inf'), 'Marruecos': float('inf'), 'Colombia': float('inf'), 'Canadá': float('inf'), 
     'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 'Brasil': float('inf'), 
@@ -124,12 +124,12 @@ cuotas_semis = {
 
 # --- CUOTAS FINALISTAS ACTUALIZADAS (11/07) ---
 cuotas_final = {
-    'Francia': (4/6) + 1,        
-    'España': (6/5) + 1,          
-    'Argentina': (11/8) + 1,      
-    'Inglaterra': (13/8) + 1,     
-    'Noruega': 5.00 + 1,          
-    'Suiza': 10.00 + 1,           
+    'Francia':  float('inf'),        
+    'España':   1,          
+    'Argentina': (11/10) + 1,      
+    'Inglaterra': (8/11) + 1,     
+    'Noruega':  float('inf'),          
+    'Suiza':  float('inf'),           
     # Eliminados (incluida Bélgica)
     'Bélgica': float('inf'), 'Marruecos': float('inf'), 'Colombia': float('inf'), 'Canadá': float('inf'), 
     'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 'Brasil': float('inf'), 
@@ -141,12 +141,12 @@ cuotas_final = {
 
 # --- CUOTAS GANADOR DEL TORNEO ACTUALIZADAS (11/07) ---
 cuotas_ganador = {
-    'Francia': (8/5) + 1,        
-    'España': (10/3) + 1,         
-    'Argentina': (9/2) + 1,       
-    'Inglaterra': 5.00 + 1,       
-    'Noruega': 16.00 + 1,         
-    'Suiza': 33.00 + 1,           
+    'Francia':  float('inf'),        
+    'España': (4/6) + 1,         
+    'Argentina': (4) + 1,       
+    'Inglaterra': 3.00 + 1,       
+    'Noruega':  float('inf'),         
+    'Suiza':  float('inf'),           
     # Eliminados (incluida Bélgica)
     'Bélgica': float('inf'), 'Marruecos': float('inf'), 'Colombia': float('inf'), 'Canadá': float('inf'), 
     'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 'Brasil': float('inf'), 
@@ -225,6 +225,16 @@ datos_historicos = [
     {"Fecha": "10/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.73},
     {"Fecha": "10/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
     {"Fecha": "10/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28}
+
+        # Datos extraídos de la captura (11/07)
+    {"Fecha": "10/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.86},
+    {"Fecha": "10/07", "Jugador": "Telenti", "Probabilidad (%)": 15.86},
+    {"Fecha": "10/07", "Jugador": "Sierra", "Probabilidad (%)": 16.17},
+    {"Fecha": "10/07", "Jugador": "Ejkar", "Probabilidad (%)": 12.34},
+    {"Fecha": "10/07", "Jugador": "Vecina", "Probabilidad (%)": 10.77},
+    {"Fecha": "10/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.74},
+    {"Fecha": "10/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
+    {"Fecha": "10/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28}
 ]
 
 df_hist_previo = pd.DataFrame(datos_historicos)
@@ -253,7 +263,7 @@ fig_lineas = px.line(
     y="Probabilidad (%)", 
     color="Jugador", 
     markers=True,
-    category_orders={"Fecha": ["22/06", "02/07", "10/07", "11/07"]}
+    category_orders={"Fecha": ["22/06", "02/07", "10/07", "11/07","15/07"]}
 )
 fig_lineas.update_layout(xaxis_title="Fecha de Actualización", yaxis_title="Probabilidad de Victoria (%)")
 st.plotly_chart(fig_lineas, use_container_width=True)

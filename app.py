@@ -235,14 +235,14 @@ datos_historicos = [
     {"Fecha": "11/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
     {"Fecha": "11/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28},
 
-    {"Fecha": "16/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.73},
-    {"Fecha": "16/07", "Jugador": "Telenti", "Probabilidad (%)": 12.93},
-    {"Fecha": "16/07", "Jugador": "Sierra", "Probabilidad (%)": 17.92},
-    {"Fecha": "16/07", "Jugador": "Ejkar", "Probabilidad (%)": 13.04},
-    {"Fecha": "16/07", "Jugador": "Vecina", "Probabilidad (%)": 10.7},
-    {"Fecha": "16/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 11.07},
-    {"Fecha": "16/07", "Jugador": "Juan", "Probabilidad (%)": 8.92},
-    {"Fecha": "16/07", "Jugador": "Mírete", "Probabilidad (%)": 6.69}
+    {"Fecha": "15/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.73},
+    {"Fecha": "15/07", "Jugador": "Telenti", "Probabilidad (%)": 12.93},
+    {"Fecha": "15/07", "Jugador": "Sierra", "Probabilidad (%)": 17.92},
+    {"Fecha": "15/07", "Jugador": "Ejkar", "Probabilidad (%)": 13.04},
+    {"Fecha": "15/07", "Jugador": "Vecina", "Probabilidad (%)": 10.7},
+    {"Fecha": "15/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 11.07},
+    {"Fecha": "15/07", "Jugador": "Juan", "Probabilidad (%)": 8.92},
+    {"Fecha": "15/07", "Jugador": "Mírete", "Probabilidad (%)": 6.69}
 ]
 
 df_hist_previo = pd.DataFrame(datos_historicos)

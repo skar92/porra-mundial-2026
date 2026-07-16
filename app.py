@@ -37,7 +37,7 @@ porra = {
 porra_futbolistas = {
     'Sierra': {'Kane': 6, 'Julián Álvarez':1},
     'Joaquín': {'Messi': 8, 'Olise': 0},
-    'Ejkar': {'Lautaro': 1, 'Raphinha': 0},
+    'Ejkar': {'Lautaro': 2, 'Raphinha': 0},
     'Vecina': {'Havertz': 3, 'Lamine Yamal': 1},
     'Telenti': {'Endrick': 0, 'Ramos': 1},
     'Miguel Ángel': {'Haaland': 7, 'Embolo': 2},
@@ -52,10 +52,10 @@ puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos,
 puntos_apuesta = {
     'Sierra': 2, 
     'Joaquín': 2,       
-    'Ejkar': 1,         
+    'Ejkar': -1,         
     'Vecina': -2,       
     'Telenti': 1,       
-    'Miguel Ángel': -1, 
+    'Miguel Ángel': 1, 
     'Mírete': -1,       
     'Juan': -2          
 }
@@ -125,8 +125,8 @@ cuotas_semis = {
 cuotas_final = {
     'Francia':  float('inf'),        
     'España':   1,          
-    'Argentina': (11/10) + 1,      
-    'Inglaterra': (8/11) + 1,     
+    'Argentina': 1,      
+    'Inglaterra': float('inf'),     
     'Noruega':  float('inf'),          
     'Suiza':  float('inf'),           
     # Eliminados (incluida Bélgica)
@@ -141,9 +141,9 @@ cuotas_final = {
 # --- CUOTAS GANADOR DEL TORNEO ACTUALIZADAS (11/07) ---
 cuotas_ganador = {
     'Francia':  float('inf'),        
-    'España': (4/6) + 1,         
-    'Argentina': (4) + 1,       
-    'Inglaterra': 3.00 + 1,       
+    'España': (8/13) + 1,         
+    'Argentina': (13/10) + 1,       
+    'Inglaterra': float('inf'),       
     'Noruega':  float('inf'),         
     'Suiza':  float('inf'),           
     # Eliminados (incluida Bélgica)
@@ -183,7 +183,7 @@ for jugador, equipos in porra.items():
     puntos_selecciones = sum([probabilidades_fase_maxima.get(e, 0.0) for e in equipos])
     puntos_totales = puntos_selecciones + puntos_futbolistas_actuales.get(jugador, 0) + puntos_apuesta.get(jugador, 0)
     filas_hoy.append({
-        "Fecha": "15/07",
+        "Fecha": "16/07",
         "Jugador": jugador,
         "Equipos": ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos]),
         "Futbolistas": ", ".join([f"{f} ({pts})" for f, pts in porra_futbolistas.get(jugador, {}).items()]),
@@ -234,6 +234,15 @@ datos_historicos = [
     {"Fecha": "11/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.74},
     {"Fecha": "11/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
     {"Fecha": "11/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28}
+
+    {"Fecha": "16/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.73},
+    {"Fecha": "16/07", "Jugador": "Telenti", "Probabilidad (%)": 12.93},
+    {"Fecha": "16/07", "Jugador": "Sierra", "Probabilidad (%)": 17.92},
+    {"Fecha": "16/07", "Jugador": "Ejkar", "Probabilidad (%)": 13.04},
+    {"Fecha": "16/07", "Jugador": "Vecina", "Probabilidad (%)": 10.7},
+    {"Fecha": "16/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 11.07},
+    {"Fecha": "16/07", "Jugador": "Juan", "Probabilidad (%)": 8.92},
+    {"Fecha": "16/07", "Jugador": "Mírete", "Probabilidad (%)": 6.69}
 ]
 
 df_hist_previo = pd.DataFrame(datos_historicos)
@@ -244,7 +253,7 @@ df_historial_completo = pd.concat([df_hist_previo, df_hoy_linea], ignore_index=T
 col1, col2 = st.columns([1.2, 0.8])
 
 with col1:
-    st.subheader("📊 Tabla de Clasificación de la Porra (15/07)")
+    st.subheader("📊 Tabla de Clasificación de la Porra (16/07)")
     df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"]]
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
@@ -262,7 +271,7 @@ fig_lineas = px.line(
     y="Probabilidad (%)", 
     color="Jugador", 
     markers=True,
-    category_orders={"Fecha": ["22/06", "02/07", "10/07", "11/07","15/07"]}
+    category_orders={"Fecha": ["22/06", "02/07", "10/07", "11/07","15/07", "16/07"]}
 )
 fig_lineas.update_layout(xaxis_title="Fecha de Actualización", yaxis_title="Probabilidad de Victoria (%)")
 st.plotly_chart(fig_lineas, use_container_width=True)

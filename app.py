@@ -233,7 +233,7 @@ datos_historicos = [
     {"Fecha": "11/07", "Jugador": "Vecina", "Probabilidad (%)": 10.77},
     {"Fecha": "11/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.74},
     {"Fecha": "11/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
-    {"Fecha": "11/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28}
+    {"Fecha": "11/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28},
 
     {"Fecha": "16/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.73},
     {"Fecha": "16/07", "Jugador": "Telenti", "Probabilidad (%)": 12.93},

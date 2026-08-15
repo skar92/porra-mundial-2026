@@ -1,783 +1,215 @@
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-from datetime import datetime
-import os
-import csv
-
-# Configuración de la interfaz de Streamlit
-st.set_page_config(page_title="Porra Mundial 2026", layout="wide")
-st.title("🏆 Seguimiento y Evolución de la Porra (Modelo No Acumulativo)")
-
-FILE_GANADORES = "ganadores_sopa.csv"
-
-def guardar_ganador(nombre):
-    if not nombre.strip():
-        return
-    file_exists = os.path.exists(FILE_GANADORES)
-    with open(FILE_GANADORES, mode='a', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["Nombre", "Fecha y Hora"])
-        writer.writerow([nombre.strip(), datetime.now().strftime('%d/%m/%Y %H:%M')])
-
-# --- CONFIGURACIÓN DE LOS JUGADORES Y COMPOSICIÓN DE EQUIPOS ---
-porra = {
-    'Sierra': ['España', 'Suiza', 'Croacia'],
-    'Joaquín': ['Portugal', 'Marruecos', 'EE.UU.'],
-    'Ejkar': ['Inglaterra', 'Colombia', 'Japón'],
-    'Vecina': ['Ecuador', 'Bélgica', 'México'],
-    'Telenti': ['Francia', 'Noruega', 'Senegal'],
-    'Miguel Ángel': ['Argentina', 'Holanda', 'Costa de Marfil'],
-    'Mírete': ['Brasil', 'Alemania', 'Uruguay'],
-    'Juan': ['Canadá', 'Turquía', 'Austria', 'Escocia', 'Bosnia and Herzegovina']
-}
-
-# --- GOLES DE FUTBOLISTAS ACTUALIZADOS ---
-porra_futbolistas = {
-    'Sierra': {'Kane': 6, 'Julián Álvarez':1},
-    'Joaquín': {'Messi': 8, 'Olise': 0},
-    'Ejkar': {'Lautaro': 2, 'Raphinha': 0},
-    'Vecina': {'Havertz': 3, 'Lamine Yamal': 1},
-    'Telenti': {'Endrick': 0, 'Ramos': 1},
-    'Miguel Ángel': {'Haaland': 7, 'Embolo': 2},
-    'Mírete': {'Oyarzabal':3, 'El Bicho': 3}, 
-    'Juan': {'Mbappé': 8, 'Vinicius': 4}
-}
-
-puntos_futbolistas_actuales = {jugador: sum(datos.values()) if isinstance(datos, dict) else 0 
-                               for jugador, datos in porra_futbolistas.items()}
-
-# --- PUNTOS GANADOS EN APUESTA MESA ACTUALIZADOS ---
-puntos_apuesta = {
-    'Sierra': 2, 
-    'Joaquín': 2,       
-    'Ejkar': -1,         
-    'Vecina': -2,       
-    'Telenti': 1,       
-    'Miguel Ángel': 1, 
-    'Mírete': -1,       
-    'Juan': -2          
-}
-
-traduccion_interna = {
-    'Francia': 'Francia', 'España': 'España', 'Inglaterra': 'Inglaterra', 'Portugal': 'Portugal',
-    'Argentina': 'Argentina', 'Brasil': 'Brasil', 'Alemania': 'Alemania', 'Holanda': 'Países Bajos',
-    'Noruega': 'Noruega', 'Bélgica': 'Bélgica', 'Marruecos': 'Marruecos', 'Colombia': 'Colombia',
-    'Japón': 'Japón', 'México': 'México', 'EE.UU.': 'EE. UU.', 'Uruguay': 'Uruguay',
-    'Croacia': 'Croacia', 'Suiza': 'Suiza', 'Ecuador': 'Ecuador', 'Austria': 'Austria',
-    'Turquía': 'Turquía', 'Senegal': 'Senegal', 'Escocia': 'Escocia', 'Canadá': 'Canadá',
-    'Costa de Marfil': 'Costa de Marfil', 'Bosnia and Herzegovina': 'Bosnia y Herzegovina'
-}
-
-banderas = {
-    'Francia': '🇫🇷', 'España': '🇪🇸', 'Inglaterra': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Portugal': '🇵🇹',
-    'Argentina': '🇦🇷', 'Brasil': '🇧🇷', 'Alemania': '🇩🇪', 'Holanda': '🇳🇱',
-    'Noruega': '🇳🇴', 'Bélgica': '🇧🇪', 'Marruecos': '🇲🇦', 'Colombia': '🇨🇴',
-    'Japón': '🇯🇵', 'México': '🇲🇽', 'EE.UU.': '🇺🇸', 'Uruguay': '🇺🇾',
-    'Croacia': '🇭🇷', 'Suiza': '🇨🇭', 'Ecuador': '🇪🇨', 'Austria': '🇦🇹',
-    'Turquía': '🇹🇷', 'Senegal': '🇸🇳', 'Escocia': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Canadá': '🇨🇦',
-    'Costa de Marfil': '🇨🇮', 'Bosnia and Herzegovina': '🇧🇦'
-}
-
-# --- CUOTAS OCTAVOS ---
-cuotas_octavos = {
-    'Francia': 1.00, 'Marruecos': 1.00, 'España': 1.00, 'Bélgica': 1.00, 
-    'Noruega': 1.00, 'Inglaterra': 1.00, 'Argentina': 1.00, 'Suiza': 1.00, 'Colombia': 1.00,
-    'Canadá': 1.00, 'Paraguay': 1.00, 'EE. UU.': 1.00, 'Portugal': 1.00, 
-    'Brasil': 1.00, 'México': 1.00, 'Egipto': 1.00, 
-    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 'Croacia': float('inf'),
-    'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'), 
-    'Senegal': float('inf'), 'Ecuador': float('inf'), 'Costa de Marfil': float('inf'), 
-    'Bosnia y Herzegovina': float('inf'), 'Austria': float('inf'), 'Cabo Verde': float('inf')
-}
-
-# --- CUOTAS CUARTOS ---
-cuotas_cuartos = {
-    'Francia': 1.00, 'Argentina': 1.00, 'Marruecos': 1.00, 'España': 1.00, 
-    'Inglaterra': 1.00, 'Bélgica': 1.00, 'Noruega': 1.00, 'Suiza': 1.00,          
-    'Colombia': float('inf'), 'Canadá': float('inf'), 'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 
-    'Brasil': float('inf'), 'México': float('inf'), 'Egipto': float('inf'), 'Croacia': float('inf'),
-    'Alemania': float('inf'), 'Países Bajos': float('inf'), 'Japón': float('inf'), 
-    'Turquía': float('inf'), 'Escocia': float('inf'), 'Uruguay': float('inf'),
-    'Senegal': float('inf'), 'Ecuador': float('inf'), 'Costa de Marfil': float('inf'), 
-    'Bosnia y Herzegovina': float('inf'), 'Austria': float('inf'), 'Cabo Verde': float('inf')
-}
-
-# --- CUOTAS SEMIFINALES ACTUALIZADAS (11/07) ---
-cuotas_semis = {
-    'Francia': 1.00,          
-    'España': 1.00,           
-    'Argentina': 1,      
-    'Inglaterra': 1,      
-    'Noruega':  float('inf'),        
-    'Suiza':  float('inf'),           
-    # Eliminados (incluida Bélgica)
-    'Bélgica': float('inf'), 'Marruecos': float('inf'), 'Colombia': float('inf'), 'Canadá': float('inf'), 
-    'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 'Brasil': float('inf'), 
-    'México': float('inf'), 'Egipto': float('inf'), 'Croacia': float('inf'), 'Alemania': float('inf'), 
-    'Países Bajos': float('inf'), 'Japón': float('inf'), 'Turquía': float('inf'), 'Escocia': float('inf'), 
-    'Uruguay': float('inf'), 'Senegal': float('inf'), 'Ecuador': float('inf'), 'Costa de Marfil': float('inf'), 
-    'Bosnia y Herzegovina': float('inf'), 'Austria': float('inf'), 'Cabo Verde': float('inf')
-}
-
-# --- CUOTAS FINALISTAS ACTUALIZADAS (11/07) ---
-cuotas_final = {
-    'Francia':  float('inf'),        
-    'España':   1,          
-    'Argentina': 1,      
-    'Inglaterra': float('inf'),     
-    'Noruega':  float('inf'),          
-    'Suiza':  float('inf'),           
-    # Eliminados (incluida Bélgica)
-    'Bélgica': float('inf'), 'Marruecos': float('inf'), 'Colombia': float('inf'), 'Canadá': float('inf'), 
-    'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 'Brasil': float('inf'), 
-    'México': float('inf'), 'Egipto': float('inf'), 'Croacia': float('inf'), 'Alemania': float('inf'), 
-    'Países Bajos': float('inf'), 'Japón': float('inf'), 'Turquía': float('inf'), 'Escocia': float('inf'), 
-    'Uruguay': float('inf'), 'Senegal': float('inf'), 'Ecuador': float('inf'), 'Costa de Marfil': float('inf'), 
-    'Bosnia y Herzegovina': float('inf'), 'Austria': float('inf'), 'Cabo Verde': float('inf')
-}
-
-# --- CUOTAS GANADOR DEL TORNEO ACTUALIZADAS (11/07) ---
-cuotas_ganador = {
-    'Francia':  float('inf'),        
-    'España': (8/13) + 1,         
-    'Argentina': (13/10) + 1,       
-    'Inglaterra': float('inf'),       
-    'Noruega':  float('inf'),         
-    'Suiza':  float('inf'),           
-    # Eliminados (incluida Bélgica)
-    'Bélgica': float('inf'), 'Marruecos': float('inf'), 'Colombia': float('inf'), 'Canadá': float('inf'), 
-    'Paraguay': float('inf'), 'EE. UU.': float('inf'), 'Portugal': float('inf'), 'Brasil': float('inf'), 
-    'México': float('inf'), 'Egipto': float('inf'), 'Croacia': float('inf'), 'Alemania': float('inf'), 
-    'Países Bajos': float('inf'), 'Japón': float('inf'), 'Turquía': float('inf'), 'Escocia': float('inf'), 
-    'Uruguay': float('inf'), 'Senegal': float('inf'), 'Ecuador': float('inf'), 'Costa de Marfil': float('inf'), 
-    'Bosnia y Herzegovina': float('inf'), 'Austria': float('inf'), 'Cabo Verde': float('inf')
-}
-
-# --- CÓMPUTO MATEMÁTICO NO ACUMULATIVO ---
-todos_equipos = set([eq for eqs in porra.values() for eq in eqs])
-probabilidades_fase_maxima = {}
-
-for eq in todos_equipos:
-    n = traduccion_interna.get(eq, eq)
-    
-    p_oct = 1 / float(cuotas_octavos.get(n, float('inf'))) if cuotas_octavos.get(n, float('inf')) != float('inf') else 0.0
-    p_cua = 1 / float(cuotas_cuartos.get(n, float('inf'))) if cuotas_cuartos.get(n, float('inf')) != float('inf') else 0.0
-    p_sem = 1 / float(cuotas_semis.get(n, float('inf'))) if cuotas_semis.get(n, float('inf')) != float('inf') else 0.0
-    p_fin = 1 / float(cuotas_final.get(n, float('inf'))) if cuotas_final.get(n, float('inf')) != float('inf') else 0.0
-    p_gan = 1 / float(cuotas_ganador.get(n, float('inf'))) if cuotas_ganador.get(n, float('inf')) != float('inf') else 0.0
-
-    p_exacta_oct = max(0.0, p_oct - p_cua)
-    p_exacta_cua = max(0.0, p_cua - p_sem)
-    p_exacta_sem = max(0.0, p_sem - p_fin)
-    p_exacta_fin = max(0.0, p_fin - p_gan)
-    p_exacta_gan = p_gan
-
-    puntos_esperados = (10 * p_exacta_oct) + (12 * p_exacta_cua) + (15 * p_exacta_sem) + (18 * p_exacta_fin) + (20 * p_exacta_gan)
-    probabilidades_fase_maxima[eq] = puntos_esperados
-
-# Filas para el día de HOY (11/07)
-filas_hoy = []
-for jugador, equipos in porra.items():
-    puntos_selecciones = sum([probabilidades_fase_maxima.get(e, 0.0) for e in equipos])
-    puntos_totales = puntos_selecciones + puntos_futbolistas_actuales.get(jugador, 0) + puntos_apuesta.get(jugador, 0)
-    filas_hoy.append({
-        "Fecha": "16/07",
-        "Jugador": jugador,
-        "Equipos": ", ".join([f"{banderas.get(e, '🏳️')} {e}" for e in equipos]),
-        "Futbolistas": ", ".join([f"{f} ({pts})" for f, pts in porra_futbolistas.get(jugador, {}).items()]),
-        "Puntos Apuesta": puntos_apuesta.get(jugador, 0),
-        "Puntos Esperados": round(puntos_totales, 2)
-    })
-
-df_hoy = pd.DataFrame(filas_hoy)
-total_puntos_global = df_hoy["Puntos Esperados"].sum()
-df_hoy["Probabilidad (%)"] = round((df_hoy["Puntos Esperados"] / (total_puntos_global if total_puntos_global > 0 else 1)) * 100, 2)
-
-# --- HISTORIAL CRONOLÓGICO CONGELADO (Incluye la captura enviada del 10/07) ---
-datos_historicos = [
-    {"Fecha": "22/06", "Jugador": "Joaquín", "Probabilidad (%)": 14.34},
-    {"Fecha": "22/06", "Jugador": "Miguel Ángel", "Probabilidad (%)": 13.99},
-    {"Fecha": "22/06", "Jugador": "Sierra", "Probabilidad (%)": 13.06},
-    {"Fecha": "22/06", "Jugador": "Mírete", "Probabilidad (%)": 13.02},
-    {"Fecha": "22/06", "Jugador": "Ejkar", "Probabilidad (%)": 12.87},
-    {"Fecha": "22/06", "Jugador": "Telenti", "Probabilidad (%)": 12.21},
-    {"Fecha": "22/06", "Jugador": "Juan", "Probabilidad (%)": 10.31},
-    {"Fecha": "22/06", "Jugador": "Vecina", "Probabilidad (%)": 10.20},
-    
-    {"Fecha": "02/07", "Jugador": "Joaquín", "Probabilidad (%)": 19.24},
-    {"Fecha": "02/07", "Jugador": "Sierra", "Probabilidad (%)": 13.51},
-    {"Fecha": "02/07", "Jugador": "Telenti", "Probabilidad (%)": 13.45},
-    {"Fecha": "02/07", "Jugador": "Vecina", "Probabilidad (%)": 13.21},
-    {"Fecha": "02/07", "Jugador": "Ejkar", "Probabilidad (%)": 11.22},
-    {"Fecha": "02/07", "Jugador": "Juan", "Probabilidad (%)": 10.88},
-    {"Fecha": "02/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 9.81},
-    {"Fecha": "02/07", "Jugador": "Mírete", "Probabilidad (%)": 8.69},
-
-    # Datos extraídos de la captura (10/07)
-    {"Fecha": "10/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.83},
-    {"Fecha": "10/07", "Jugador": "Telenti", "Probabilidad (%)": 15.90},
-    {"Fecha": "10/07", "Jugador": "Sierra", "Probabilidad (%)": 15.64},
-    {"Fecha": "10/07", "Jugador": "Ejkar", "Probabilidad (%)": 12.37},
-    {"Fecha": "10/07", "Jugador": "Vecina", "Probabilidad (%)": 11.28},
-    {"Fecha": "10/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.73},
-    {"Fecha": "10/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
-    {"Fecha": "10/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28},
-
-        # Datos extraídos de la captura (11/07)
-    {"Fecha": "11/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.86},
-    {"Fecha": "11/07", "Jugador": "Telenti", "Probabilidad (%)": 15.86},
-    {"Fecha": "11/07", "Jugador": "Sierra", "Probabilidad (%)": 16.17},
-    {"Fecha": "11/07", "Jugador": "Ejkar", "Probabilidad (%)": 12.34},
-    {"Fecha": "11/07", "Jugador": "Vecina", "Probabilidad (%)": 10.77},
-    {"Fecha": "11/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 10.74},
-    {"Fecha": "11/07", "Jugador": "Juan", "Probabilidad (%)": 8.97},
-    {"Fecha": "11/07", "Jugador": "Mírete", "Probabilidad (%)": 6.28},
-
-    {"Fecha": "15/07", "Jugador": "Joaquín", "Probabilidad (%)": 18.73},
-    {"Fecha": "15/07", "Jugador": "Telenti", "Probabilidad (%)": 12.93},
-    {"Fecha": "15/07", "Jugador": "Sierra", "Probabilidad (%)": 17.92},
-    {"Fecha": "15/07", "Jugador": "Ejkar", "Probabilidad (%)": 13.04},
-    {"Fecha": "15/07", "Jugador": "Vecina", "Probabilidad (%)": 10.7},
-    {"Fecha": "15/07", "Jugador": "Miguel Ángel", "Probabilidad (%)": 11.07},
-    {"Fecha": "15/07", "Jugador": "Juan", "Probabilidad (%)": 8.92},
-    {"Fecha": "15/07", "Jugador": "Mírete", "Probabilidad (%)": 6.69}
-]
-
-df_hist_previo = pd.DataFrame(datos_historicos)
-df_hoy_linea = df_hoy[["Fecha", "Jugador", "Probabilidad (%)"]].copy()
-df_historial_completo = pd.concat([df_hist_previo, df_hoy_linea], ignore_index=True)
-
-# --- RENDERIZADO INTERFAZ STREAMLIT ---
-col1, col2 = st.columns([1.2, 0.8])
-
-with col1:
-    st.subheader("📊 Tabla de Clasificación de la Porra (16/07)")
-    df_mostrar = df_hoy.sort_values(by="Puntos Esperados", ascending=False)[["Jugador", "Equipos", "Futbolistas", "Puntos Apuesta", "Puntos Esperados", "Probabilidad (%)"]]
-    st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
-
-with col2:
-    st.subheader("🎯 Distribución Actual de Probabilidad (%)")
-    fig_barras = px.bar(df_mostrar, x="Jugador", y="Probabilidad (%)", color="Jugador", text_auto=True)
-    st.plotly_chart(fig_barras, use_container_width=True)
-
-st.markdown("---")
-st.subheader("⏳ Evolución Temporal de la Porra")
-
-fig_lineas = px.line(
-    df_historial_completo, 
-    x="Fecha", 
-    y="Probabilidad (%)", 
-    color="Jugador", 
-    markers=True,
-    category_orders={"Fecha": ["22/06", "02/07", "10/07", "11/07","15/07", "16/07"]}
-)
-fig_lineas.update_layout(xaxis_title="Fecha de Actualización", yaxis_title="Probabilidad de Victoria (%)")
-st.plotly_chart(fig_lineas, use_container_width=True)
-
-
-import streamlit as st
-import random
-import json
-import os
 import base64
 from datetime import datetime
-
-# ==============================================================================
-# --- 📊 CONTROL DE JUGADORES POR JUEGO (INDEPENDIENTES) ---
-# ==============================================================================
-# Se ha añadido "joaquin" a la lista base
-JUGADORES_BASE = ["telenti", "juan", "mirete", "carlos", "miguel angel", "sierra", "ejkar", "joaquin"]
-
-# Asumimos que estas funciones existen en tu app principal, si no, darán error.
-# Para esta demo, si no existen, creamos un mock vacío.
-if 'listar_ganadores' not in globals():
-    def listar_ganadores():
-        return st.session_state.get('mock_ganadores', st.empty())
-if 'guardar_ganador' not in globals():
-    def guardar_ganador(nombre):
-        if 'mock_ganadores_list' not in st.session_state:
-            st.session_state['mock_ganadores_list'] = []
-        st.session_state['mock_ganadores_list'].append(nombre)
-        # Esto es solo para que el mock funcione en la demo
-        import pandas as pd
-        st.session_state['mock_ganadores'] = pd.DataFrame(st.session_state['mock_ganadores_list'], columns=['Ganador'])
-
-df_ganadores = listar_ganadores()
-registros_reales = []
-
-# Intentamos obtener los valores si es un DataFrame, si no, asumimos lista vacía del mock inicial
-try:
-    if not df_ganadores.empty:
-        registros_reales = [str(val).strip().lower() for val in df_ganadores.values.flatten()]
-except:
-    registros_reales = []
-
-# 🧩 FILTRO SOPA: Desaparece si el nombre está tal cual
-jugadores_sopa = [p for p in JUGADORES_BASE if p.lower() not in registros_reales]
-
-# 🦖 FILTRO DINO: Desaparece si ya tiene una línea que empiece por su nombre + (dino:
-jugadores_dino = [p for p in JUGADORES_BASE if not any(r.startswith(f"{p.lower()} (dino:") for r in registros_reales)]
-
-
-# ==============================================================================
-# --- 🧩 SOPA DE LETRAS INTERACTIVA ---
-# ==============================================================================
-st.markdown("---")
-st.subheader("🧩 Sopa de Letras Interactiva: Encuentra los 20 Juanes")
-st.write("Usa el **dedo** o el **ratón** para arrastrar sobre las letras en cualquier dirección. Si encuentras un **JUAN**, quedará redondeado en verde.")
-
-@st.cache_data
-def generar_sopa_juan_sin_clones():
-    tam = 15
-    grid = [['' for _ in range(tam)] for _ in range(tam)]
-    word = "JUAN"
-    direcciones = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
-    
-    random.seed(101) 
-    
-    colocados = 0
-    intentos = 0
-    juanes_coordenadas = []
-    registro_coordenadas = set()
-    
-    while colocados < 20 and intentos < 4000:
-        intentos += 1
-        d = random.choice(direcciones)
-        r = random.randint(0, tam - 1)
-        c = random.randint(0, tam - 1)
-        
-        if (r, c, d) in registro_coordenadas:
-            continue
-            
-        if 0 <= r + d[0]*3 < tam and 0 <= c + d[1]*3 < tam:
-            viable = True
-            for i in range(4):
-                nr, nc = r + d[0]*i, c + d[1]*i
-                if grid[nr][nc] != '' and grid[nr][nc] != word[i]:
-                    viable = False
-                    break
-                    
-            if viable:
-                coords_palabra = []
-                for i in range(4):
-                    nr, nc = r + d[0]*i, c + d[1]*i
-                    grid[nr][nc] = word[i]
-                    coords_palabra.append({"r": nr, "c": nc})
-                
-                juanes_coordenadas.append(coords_palabra)
-                registro_coordenadas.add((r, c, d))
-                colocados += 1
-
-    letras_relleno = "BCDEFGHIKLMNOPQRSTVXYZ"
-    for r in range(tam):
-        for c in range(tam):
-            if grid[r][c] == '':
-                grid[r][c] = random.choice(letras_relleno)
-    return grid, juanes_coordenadas
-
-grid_sopa, lista_juanes = generar_sopa_juan_sin_clones()
-
+import os
+import pandas as pd
+import plotly.express as px
+import streamlit as st
 import streamlit.components.v1 as components
 
-html_game = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<style>
-    body {{
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        margin: 0; padding: 5px; background-color: transparent;
-        display: flex; flex-direction: column; align-items: center;
-        user-select: none; -webkit-user-select: none;
-    }}
-    .header-box {{
-        font-size: 18px; font-weight: bold; margin-bottom: 12px;
-        color: #2ecc71; background: rgba(46, 204, 113, 0.15);
-        padding: 8px 20px; border-radius: 30px; border: 1px solid rgba(46, 204, 113, 0.3);
-    }}
-    .grid-container {{
-        width: 100%; max-width: 440px; aspect-ratio: 1;
-        background: #1e1e24; padding: 8px; border-radius: 14px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.4); box-sizing: border-box;
-    }}
-    .grid {{
-        display: grid; grid-template-columns: repeat(15, 1fr); grid-gap: 3px;
-        width: 100%; height: 100%; touch-action: none;
-    }}
-    .cell {{
-        aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-        font-weight: bold; font-family: 'Courier New', Courier, monospace; font-size: 4vw;
-        color: #ecf0f1; background: #2c3e50; border-radius: 4px;
-        cursor: pointer; transition: background 0.1s, transform 0.05s;
-    }}
-    @media (min-width: 450px) {{
-        .cell {{ font-size: 18px; }}
-    }}
-    .cell.dragging {{
-        background: #3498db !important; color: #fff !important;
-        border-radius: 50%; transform: scale(1.05);
-    }}
-    .cell.found {{
-        background: #2ecc71 !important; color: #fff !important;
-        border-radius: 50% !important;
-        box-shadow: 0 0 6px #2ecc71;
-    }}
-    .win-banner {{
-        display: none; margin-top: 15px; padding: 12px 20px;
-        background: #27ae60; color: white; font-weight: bold;
-        border-radius: 10px; font-size: 15px; text-align: center;
-        box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4); max-width: 420px;
-    }}
-</style>
-</head>
-<body>
+# Configuración de la interfaz de Streamlit
+st.set_page_config(page_title="Draft LaLiga 2026/27", layout="wide")
+st.title("🏆 Seguimiento y Clasificación del Draft de LaLiga")
 
-<div class="header-box">🕵️‍♂️ Juanes Cazados: <span id="counter">0</span> / 20</div>
-<div class="grid-container">
-    <div class="grid" id="soup-grid"></div>
-</div>
-<div class="win-banner" id="win-banner">
-    🎉 ¡BRUTAL! HAS CAZADO LOS 20 JUANES.<br>
-    🔑 Código de Registro Secreto: <span style="font-family:monospace; background:#1b5e20; padding:2px 6px; border-radius:4px;">JUANETE!!</span>
-</div>
+# --- FUNCIÓN PARA CONVERTIR IMÁGENES A BASE64 ---
+def obtener_imagen_base64(ruta):
+    if os.path.exists(ruta):
+        with open(ruta, "rb") as f:
+            data = f.read()
+        encoded = base64.b64encode(data).decode()
+        return f"data:image/png;base64,{encoded}"
+    return ""
 
-<script>
-    const gridData = {json.dumps(grid_sopa)};
-    const targetWords = {json.dumps(lista_juanes)};
-    
-    let isDragging = false; let startCell = null; let currentEndCell = null; let foundIndexes = [];
-    const gridContainer = document.getElementById('soup-grid');
-    
-    for(let r=0; r<15; r++) {{
-        for(let c=0; c<15; c++) {{
-            const cell = document.createElement('div');
-            cell.className = 'cell'; cell.innerText = gridData[r][c];
-            cell.setAttribute('data-r', r); cell.setAttribute('data-c', c);
-            cell.id = `c-${{r}}-${{c}}`; gridContainer.appendChild(cell);
-        }}
-    }}
-    
-    gridContainer.addEventListener('mousedown', (e) => {{
-        if(e.target.classList.contains('cell')) {{ isDragging = true; startCell = getCoords(e.target); currentEndCell = startCell; highlightCells(startCell, startCell); }}
-    }});
-    gridContainer.addEventListener('mousemove', (e) => {{
-        if (!isDragging) return;
-        let el = document.elementFromPoint(e.clientX, e.clientY);
-        if(el && el.classList.contains('cell')) {{ let cellCoords = getCoords(el); currentEndCell = cellCoords; highlightCells(startCell, cellCoords); }}
-    }});
-    window.addEventListener('mouseup', () => {{
-        if (!isDragging) return; isDragging = false; checkWord(startCell, currentEndCell);
-        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
-    }});
-    gridContainer.addEventListener('touchstart', (e) => {{
-        let touch = e.touches[0]; let el = document.elementFromPoint(touch.clientX, touch.clientY);
-        if(el && el.classList.contains('cell')) {{ e.preventDefault(); isDragging = true; startCell = getCoords(el); currentEndCell = startCell; highlightCells(startCell, startCell); }}
-    }}, {{passive: false}});
-    gridContainer.addEventListener('touchmove', (e) => {{
-        if (!isDragging) return; e.preventDefault(); let touch = e.touches[0]; let el = document.elementFromPoint(touch.clientX, touch.clientY);
-        if(el && el.classList.contains('cell')) {{ let cellCoords = getCoords(el); currentEndCell = cellCoords; highlightCells(startCell, cellCoords); }}
-    }}, {{passive: false}});
-    gridContainer.addEventListener('touchend', (e) => {{
-        if (!isDragging) return; isDragging = false; checkWord(startCell, currentEndCell);
-        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
-    }}, {{passive: false}});
-
-    function getCoords(el) {{ return {{ r: parseInt(el.getAttribute('data-r')), c: parseInt(el.getAttribute('data-c')) }}; }}
-    function getLineCells(start, end) {{
-        let dr = end.r - start.r; let dc = end.c - start.c; let steps = Math.max(Math.abs(dr), Math.abs(dc));
-        if (steps !== 3) return null; if (dr !== 0 && dc !== 0 && Math.abs(dr) !== Math.abs(dc)) return null;
-        let stepR = dr === 0 ? 0 : dr / steps; let stepC = dc === 0 ? 0 : dc / steps;
-        let path = []; for(let i=0; i<=steps; i++) {{ path.push({{r: start.r + stepR*i, c: start.c + stepC*i}}); }}
-        return path;
-    }}
-    function highlightCells(start, end) {{
-        document.querySelectorAll('.cell.dragging').forEach(el => el.classList.remove('dragging'));
-        let path = getLineCells(start, end);
-        if (path) {{ path.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('dragging'); }}); }}
-        else {{ document.getElementById(`c-${{start.r}}-${{start.c}}`).classList.add('dragging'); }}
-    }}
-    function checkWord(start, end) {{
-        if(!start || !end) return; let path = getLineCells(start, end); if (!path) return;
-        for(let i=0; i<targetWords.length; i++) {{
-            if (foundIndexes.includes(i)) continue;
-            let target = targetWords[i]; let matchForward = true, matchBackward = true;
-            for(let j=0; j<4; j++) {{
-                if(path[j].r !== target[j].r || path[j].c !== target[j].c) matchForward = false;
-                if(path[j].r !== target[3-j].r || path[j].c !== target[3-j].c) matchBackward = false;
-            }}
-            if (matchForward || matchBackward) {{
-                foundIndexes.push(i); target.forEach(cell => {{ document.getElementById(`c-${{cell.r}}-${{cell.c}}`).classList.add('found'); }});
-                document.getElementById('counter').innerText = foundIndexes.length;
-                if (foundIndexes.length === 20) {{ document.getElementById('win-banner').style.display = 'block'; }}
-                break;
-            }}
-        }}
-    }}
-</script>
-</body>
-</html>
-"""
-
-col_sopa, col_registro = st.columns([1.1, 0.9])
-with col_sopa:
-    components.html(html_game, height=560)
-
-with col_registro:
-    st.markdown("### 🏆 Canjear Código de Victoria")
-    st.write("Introduce el código de la sopa para desbloquear el registro:")
-    codigo_verificador = st.text_input("Código secreto:", type="password")
-    
-    if codigo_verificador.strip() == "JUANETE!!":
-        st.success("🔓 ¡CÓDIGO VERIFICADO!")
-        if jugadores_sopa:
-            with st.form("salon_fama_form", clear_on_submit=True):
-                # Desplegable de la sopa (incluye a Joaquin si no ha ganado)
-                jugador_seleccionado = st.selectbox("¿Quién eres?", jugadores_sopa, key="sopa_user")
-                enviar_nombre = st.form_submit_button("🥇 Inmortalizar mi Nombre")
-                if enviar_nombre and jugador_seleccionado:
-                    guardar_ganador(jugador_seleccionado)
-                    st.success(f"¡Registrado {jugador_seleccionado}!")
-                    st.rerun()
-        else:
-            st.warning("⚠️ Todos registrados en la sopa.")
-    elif codigo_verificador:
-        st.error("Código incorrecto.")
-
-    st.markdown("---")
-    st.markdown("### 🌟 Historial de Ganadores")
-    try:
-        if not df_ganadores.empty:
-            st.dataframe(df_ganadores.sort_index(ascending=False), use_container_width=True, hide_index=True)
-    except:
-        pass
-
+# --- RUTAS DE LOS ESCUDOS EN LA CARPETA /img ---
+escudos_archivos = {
+    "Athletic Club": "img/athletic.png",
+    "Elche": "img/elche.png",
+    "Real Betis Balompie": "img/betis.png",
+    "Malaga": "img/malaga.png",
+    "Real Sociedad": "img/realsociedad.png",
+    "Racing": "img/racing.png",
+    "Celta": "img/celta.png",
+    "Levante": "img/levante.png",
+    "Valencia": "img/valencia.png",
+    "Alavés": "img/alaves.png",
+    "Getafe": "img/getafe.png",
+    "Rayo Vallecano": "img/rayo.png",
+    "Sevilla": "img/sevilla.png",
+    "Osasuna": "img/osasuna.png",
+    "Espanyol": "img/espanyol.png",
+    "Deportivo": "img/deportivo.png",
+}
 
 # ==============================================================================
-# --- 🦖 MINIJUEGO: EL SALTO DEL MUNDIAL ---
+# 📝 ÚNICO SITIO DONDE SE ACTUALIZAN LOS DATOS DE LA JORNADA
 # ==============================================================================
-st.markdown("---")
-st.subheader("🎮 Minijuego: El Salto del Mundial")
-st.write("Esquiva las **tarjetas rojas (🟥)** y junta **copas (🏆)**. Salta con **ESPACIO**, **FLECHA ARRIBA** o **TOCANDO LA PANTALLA**.")
 
-carpeta_del_script = os.path.dirname(os.path.abspath(__file__))
-# Asegúrate de tener una imagen 'jugador.png' o se usará el fallback de pelota
-ruta_foto_jugador = os.path.join(carpeta_del_script, "jugador.png")
+asig_equipos = {
+    "Ejkar": ["Athletic Club", "Elche"],
+    "Sierra": ["Real Betis Balompie", "Malaga"],
+    "Vecina": ["Real Sociedad", "Racing"],
+    "Mírete": ["Celta", "Levante"],
+    "Miguel Ángel": ["Valencia", "Alavés"],
+    "Juan": ["Getafe", "Rayo Vallecano"],
+    "Joaquín": ["Sevilla", "Osasuna"],
+    "Telenti": ["Espanyol", "Deportivo"],
+}
 
-img_base64 = ""
-if os.path.exists(ruta_foto_jugador):
-    try:
-        with open(ruta_foto_jugador, "rb") as f:
-            img_base64 = base64.b64encode(f.read()).decode("utf-8").replace("\n", "").replace("\r", "")
-    except Exception as e:
-        st.error(f"⚠️ Error de imagen: {e}")
+stats_equipos = {
+    "Athletic Club": {"G": 0, "E": 0, "P": 0},
+    "Elche": {"G": 0, "E": 0, "P": 0},
+    "Real Betis Balompie": {"G": 0, "E": 0, "P": 0},
+    "Malaga": {"G": 0, "E": 0, "P": 0},
+    "Real Sociedad": {"G": 0, "E": 0, "P": 0},
+    "Racing": {"G": 0, "E": 0, "P": 0},
+    "Celta": {"G": 0, "E": 0, "P": 0},
+    "Levante": {"G": 0, "E": 0, "P": 0},
+    "Valencia": {"G": 0, "E": 0, "P": 0},
+    "Alavés": {"G": 0, "E": 0, "P": 0},
+    "Getafe": {"G": 0, "E": 0, "P": 0},
+    "Rayo Vallecano": {"G": 0, "E": 0, "P": 0},
+    "Sevilla": {"G": 0, "E": 0, "P": 0},
+    "Osasuna": {"G": 0, "E": 0, "P": 0},
+    "Espanyol": {"G": 0, "E": 0, "P": 0},
+    "Deportivo": {"G": 0, "E": 0, "P": 0},
+}
 
-html_dino = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<style>
-    body {{ margin: 0; padding: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; background-color: transparent; font-family: sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }}
-    #game-container {{ width: 100%; max-width: 800px; height: 250px; background-color: #f7f7f7; border-bottom: 2px solid #535353; border-radius: 8px; position: relative; overflow: hidden; cursor: pointer; }}
-    #player {{ width: 80px; height: 70px; position: absolute; bottom: 0; left: 50px; z-index: 10; }}
-    #player-canvas {{ width: 100%; height: 100%; display: block; }}
-    .obstacle {{ position: absolute; bottom: 0; z-index: 5; }}
-    .cactus {{ width: 25px; height: 45px; background-color: #e74c3c; border-radius: 4px; }}
-    .cactus::after {{ content: '🟥'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; }}
-    .copa {{ width: 35px; height: 35px; bottom: 50px; }}
-    .copa::after {{ content: '🏆'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; }}
-    #score-board {{ position: absolute; top: 10px; right: 20px; font-size: 20px; font-weight: bold; color: #535353; font-family: monospace; z-index: 15; }}
-    
-    #restart-message {{ 
-        display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-        text-align: center; background-color: rgba(0,0,0,0.9); color: white; padding: 15px 25px; border-radius: 12px; z-index: 20; 
-    }}
-    .save-btn {{
-        background-color: #2ecc71; color: white; border: none; padding: 8px 16px; 
-        border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: background 0.2s;
-    }}
-    .save-btn:hover {{ background-color: #27ae60; }}
-    .jump {{ animation: jump 0.45s linear; }}
-    @keyframes jump {{ 0% {{ bottom: 0; }} 30% {{ bottom: 130px; }} 70% {{ bottom: 130px; }} 100% {{ bottom: 0; }} }}
-</style>
-</head>
-<body>
+porra_goleadores = {
+    "Borja Iglesias": {"Equipo": "Athletic Club", "Jugador": "Ejkar", "Goles": 0},
+    "Lookman": {"Equipo": "Real Betis Balompie", "Jugador": "Sierra", "Goles": 0},
+    "Aubameyang": {"Equipo": "Real Sociedad", "Jugador": "Vecina", "Goles": 0},
+    "Budimir": {"Equipo": "Celta", "Jugador": "Mírete", "Goles": 0},
+    "Mikautadze": {"Equipo": "Valencia", "Jugador": "Miguel Ángel", "Goles": 0},
+    "Mikel Oyarzabal": {"Equipo": "Getafe", "Jugador": "Juan", "Goles": 0},
+    "Julián Álvarez": {"Equipo": "Sevilla", "Jugador": "Joaquín", "Goles": 0},
+    "Sørloth": {"Equipo": "Sevilla", "Jugador": "Joaquín", "Goles": 0},
+    "Enes Unal": {"Equipo": "Espanyol", "Jugador": "Telenti", "Goles": 0},
+    "Hugo Duro": {"Equipo": "Espanyol", "Jugador": "Telenti", "Goles": 0},
+}
 
-<div id="game-container">
-    <div id="score-board">00000</div>
-    <div id="player"><canvas id="player-canvas" width="100" height="100"></canvas></div>
-    <div id="restart-message">
-        <h2 style="margin:0 0 5px 0; color:#e74c3c;">GAME OVER</h2>
-        <div id="final-score-text" style="font-weight:bold; margin-bottom:5px;">Puntos: 0</div>
-        <button id="save-score-action" class="save-btn">💾 Enviar Puntos abajo</button>
-        <p style="margin:8px 0 0 0; font-size:11px; color:#aaa;">O pulsa Espacio/Toca para reiniciar partida</p>
-    </div>
-</div>
-
-<script>
-    const player = document.getElementById("player");
-    const canvas = document.getElementById("player-canvas");
-    const ctx = canvas.getContext("2d");
-    const container = document.getElementById("game-container");
-    const scoreBoard = document.getElementById("score-board");
-    const restartMessage = document.getElementById("restart-message");
-    const finalScoreText = document.getElementById("final-score-text");
-    const saveScoreAction = document.getElementById("save-score-action");
-    
-    let isJumping = false; let isGameOver = false; let score = 0; let gameSpeed = 6; let obstacleTimer; let scoreInterval;
-    const b64Data = "{img_base64}"; const playerImg = new Image();
-    if (b64Data && b64Data.length > 0) {{ playerImg.src = "data:image/png;base64," + b64Data; }}
-    playerImg.onload = function() {{ dibujarAvatar(); }};
-    playerImg.onerror = function() {{ dibujarFallback(); }};
-
-    function dibujarAvatar() {{ ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(playerImg, 0, 0, canvas.width, canvas.height); }}
-    function dibujarFallback() {{ ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = "#3498db"; ctx.beginPath(); ctx.arc(50, 50, 45, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ffffff"; ctx.font = "bold 30px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⚽", 50, 50); }}
-
-    function jump(e) {{
-        if (isGameOver) {{
-            if(e.target && e.target.id === 'save-score-action') return;
-            if (e.code === 'Space' || e.type === 'touchstart' || e.code === 'ArrowUp') {{ resetGame(); }}
-            return;
-        }}
-        if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
-        if (!isJumping) {{
-            isJumping = true; player.classList.add("jump");
-            setTimeout(() => {{ player.classList.remove("jump"); isJumping = false; }}, 450);
-        }}
-    }}
-
-    document.addEventListener('keydown', jump);
-    container.addEventListener('touchstart', jump);
-
-    function createObstacle() {{
-        if (isGameOver) return;
-        const obstacle = document.createElement('div');
-        const isCopa = Math.random() > 0.65;
-        obstacle.classList.add('obstacle', isCopa ? 'copa' : 'cactus');
-        let obstaclePos = container.offsetWidth;
-        obstacle.style.left = obstaclePos + 'px';
-        container.appendChild(obstacle);
-
-        let moveInterval = setInterval(() => {{
-            if (isGameOver) {{ clearInterval(moveInterval); return; }}
-            obstaclePos -= gameSpeed; obstacle.style.left = obstaclePos + 'px';
-            if (obstaclePos < -40) {{ clearInterval(moveInterval); obstacle.remove(); }}
-            
-            if (obstaclePos > 45 && obstaclePos < 95) {{
-                let playerBottom = parseInt(window.getComputedStyle(player).getPropertyValue("bottom"));
-                if (isCopa) {{
-                    if (playerBottom + 50 >= 50 && playerBottom <= 85) {{
-                        score += 50; scoreBoard.innerText = score.toString().padStart(5, '0');
-                        clearInterval(moveInterval); obstacle.remove(); gameSpeed += 0.2;
-                    }}
-                }} else {{
-                    if (playerBottom < 45) {{ gameOver(); }}
-                }}
-            }}
-        }}, 10);
-
-        let minTiempo = Math.max(600, 1000 - (gameSpeed * 40));
-        let maxTiempo = Math.max(1200, 2000 - (gameSpeed * 60));
-        obstacleTimer = setTimeout(createObstacle, Math.random() * (maxTiempo - minTiempo) + minTiempo);
-    }}
-
-    function startGame() {{
-        isGameOver = false; score = 0; gameSpeed = 6; restartMessage.style.display = "none"; player.style.bottom = "0px"; scoreBoard.innerText = "00000";
-        if (playerImg.complete && playerImg.naturalWidth !== 0) {{ dibujarAvatar(); }} else {{ dibujarFallback(); }}
-        document.querySelectorAll('.obstacle').forEach(el => el.remove());
-        scoreInterval = setInterval(() => {{ score += 1; scoreBoard.innerText = score.toString().padStart(5, '0'); if (score % 150 === 0) {{ gameSpeed += 0.5; }} }}, 100);
-        createObstacle();
-    }}
-
-    function gameOver() {{
-        isGameOver = true;
-        player.classList.remove("jump");
-        clearTimeout(obstacleTimer);
-        clearInterval(scoreInterval);
-        
-        finalScoreText.innerText = "Has conseguido: " + score + " pts";
-        restartMessage.style.display = "block";
-        
-        saveScoreAction.onclick = function(e) {{
-            e.stopPropagation();
-            let parentUrl = document.referrer.split('?')[0]; 
-            window.open(parentUrl + '?game_score=' + score, '_blank');
-        }};
-    }}
-
-    function resetGame() {{ startGame(); }}
-    if (!b64Data || b64Data.length === 0) {{ dibujarFallback(); }}
-    startGame();
-</script>
-</body>
-</html>
-"""
-
-components.html(html_dino, height=280)
-
+puntos_apuesta = {
+    "Sierra": 0, "Joaquín": 0, "Ejkar": 0, "Vecina": 0,
+    "Telenti": 0, "Miguel Ángel": 0, "Mírete": 0, "Juan": 0,
+}
 
 # ==============================================================================
-# --- 🛠️ RECEPCIÓN DE MARCADORES AUTOMÁTICOS ---
-# ==============================================================================
-st.markdown("### 💾 Guardar Récord del Dino")
 
-puntos_detectados = None
-if "game_score" in st.query_params:
-    try:
-        puntos_detectados = int(st.query_params["game_score"])
-    except ValueError:
-        puntos_detectados = None
+equipo_a_jugador = {}
+for jugador, lista_eqs in asig_equipos.items():
+    for eq in lista_eqs:
+        equipo_a_jugador[eq] = jugador
 
-if puntos_detectados is not None:
-    st.info(f"🎯 **¡Puntuación cargada con éxito!** Vas a registrar: **{puntos_detectados} puntos**")
+# --- CONSTRUCCIÓN DE LA TABLA DE EQUIPOS ---
+filas_equipos = []
+for eq, st_eq in stats_equipos.items():
+    g, e, p = st_eq["G"], st_eq["E"], st_eq["P"]
+    jugados = g + e + p
+    puntos = (g * 3) + (e * 1)
     
-    if jugadores_dino:
-        with st.form("guardar_record_dino_auto", clear_on_submit=True):
-            # Desplegable del dino (incluye a Joaquin si no tiene récord)
-            jugador_seleccionado = st.selectbox("Selecciona tu nombre para inmortalizar la marca:", jugadores_dino, key="dino_user_final")
-            submit_record = st.form_submit_button("🥇 Inmortalizar Récord y Hora")
-            
-            if submit_record and jugador_seleccionado:
-                hora_actual = datetime.now().strftime("%H:%M:%S")
-                nombre_registro = f"{jugador_seleccionado} (Dino: {puntos_detectados} pts a las {hora_actual})"
-                
-                guardar_ganador(nombre_registro)
-                st.success(f"¡Récord guardado para {jugador_seleccionado}!")
-                
-                # Limpiar query params de forma compatible con Streamlit moderno
-                st.query_params.clear()
-                st.rerun()
-                
-        if st.button("❌ Descartar y limpiar"):
-            st.query_params.clear()
-            st.rerun()
+    ruta_img = escudos_archivos.get(eq, "")
+    base64_img = obtener_imagen_base64(ruta_img)
+    if base64_img:
+        escudo_html = f'<img src="{base64_img}" width="24" style="vertical-align: middle; margin-right: 8px;"> {eq}'
     else:
-        st.warning("⚠️ Todos los jugadores ya tienen un récord guardado.")
-        if st.button("🔄 Limpiar URL"):
-            st.query_params.clear()
-            st.rerun()
-else:
-    st.caption("🏃‍♂️ Juega una partida. Al perder, pulsa el botón verde dentro del juego y este panel se activará solo con tus puntos.")
+        escudo_html = f"⚽ {eq}"
+        
+    filas_equipos.append({
+        "Equipo_Nombre": eq,
+        "Equipo": escudo_html,
+        "Jugador": equipo_a_jugador.get(eq, "-"),
+        "PJ": jugados, "G": g, "E": e, "P": p, "Puntos": puntos,
+    })
 
+df_equipos = pd.DataFrame(filas_equipos).sort_values(by="Puntos", ascending=False).reset_index(drop=True)
 
+# --- CONSTRUCCIÓN DE LA TABLA DE GOLEADORES (SIN COLUMNA EQUIPO) ---
+filas_goleadores = []
+for gol, info in porra_goleadores.items():
+    eq = info["Equipo"]
+    st_eq = stats_equipos.get(eq, {"G":0, "E":0, "P":0})
+    pj_equipo = st_eq["G"] + st_eq["E"] + st_eq["P"]
+        
+    filas_goleadores.append({
+        "Goleador": gol,
+        "Jugador": info["Jugador"],
+        "PJ": pj_equipo,
+        "Goles": info["Goles"]
+    })
 
-import streamlit as st
-import streamlit.components.v1 as components
+df_goleadores = pd.DataFrame(filas_goleadores)
+if not df_goleadores.empty:
+    df_goleadores = df_goleadores.sort_values(by="Goles", ascending=False).reset_index(drop=True)
 
-import streamlit as st
-import streamlit.components.v1 as components
+# --- CLASIFICACIÓN GENERAL ---
+filas_general = []
+for jug in asig_equipos.keys():
+    eqs_jugador = asig_equipos[jug]
+    pts_eqs = sum([df_equipos.loc[df_equipos["Equipo_Nombre"] == eq, "Puntos"].values[0] for eq in eqs_jugador if eq in df_equipos["Equipo_Nombre"].values])
+    goles_jugador = sum([info["Goles"] for info in porra_goleadores.values() if info["Jugador"] == jug])
+    extra = puntos_apuesta.get(jug, 0)
+    total = pts_eqs + goles_jugador + extra
+    
+    filas_general.append({
+        "Jugador": f"<b>{jug}</b>",
+        "Puntos de Equipos": pts_eqs,
+        "Goles": goles_jugador,
+        "Total": f"<span style='font-size: 1.2em; font-weight: bold;'>{total}</span>",
+        "Total_Num": total
+    })
+
+df_general = pd.DataFrame(filas_general).sort_values(by="Total_Num", ascending=False).reset_index(drop=True)
+
+# --- ESTILOS CSS ---
+st.markdown("""
+<style>
+    .dataframe-container { overflow-x: auto; margin-bottom: 20px; }
+    .styled-table {
+        border-collapse: collapse; width: 100%; font-size: 0.95em; font-family: sans-serif; text-align: left;
+    }
+    .styled-table thead tr { background-color: #2b2b2b; color: #ffffff; text-align: left; }
+    .styled-table th, .styled-table td { padding: 10px 14px; border-bottom: 1px solid #444444; }
+    .styled-table tbody tr:nth-of-type(even) { background-color: rgba(255, 255, 255, 0.03); }
+</style>
+""", unsafe_allow_html=True)
+
+# --- RENDERIZADO EN LA WEB ---
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("⚽ Clasificación de Equipos")
+    df_mostrar_eq = df_equipos[["Equipo", "Jugador", "PJ", "G", "E", "P", "Puntos"]]
+    st.markdown(f'<div class="dataframe-container">{df_mostrar_eq.to_html(escape=False, index=False, classes="styled-table")}</div>', unsafe_allow_html=True)
+
+with col2:
+    st.subheader("🎯 Tabla de Goleadores")
+    if not df_goleadores.empty:
+        df_mostrar_gol = df_goleadores[["Goleador", "Jugador", "PJ", "Goles"]]
+        st.markdown(f'<div class="dataframe-container">{df_mostrar_gol.to_html(escape=False, index=False, classes="styled-table")}</div>', unsafe_allow_html=True)
+    else:
+        st.info("No hay goleadores registrados todavía.")
+
+st.markdown("---")
+
+st.subheader("🏆 Clasificación General (Participantes)")
+df_mostrar_gen = df_general[["Jugador", "Puntos de Equipos", "Goles", "Total"]]
+st.markdown(f'<div class="dataframe-container">{df_mostrar_gen.to_html(escape=False, index=False, classes="styled-table")}</div>', unsafe_allow_html=True)
+
+st.markdown("---")
+
+st.subheader("📊 Gráfica de Puntos Totales")
+fig_barras = px.bar(df_general, x="Jugador", y="Total_Num", color="Jugador", text_auto=True)
+max_pts = df_general["Total_Num"].max()
+fig_barras.update_layout(showlegend=False, xaxis_title="Participante", yaxis_title="Puntos Totales", yaxis=dict(range=[0, max_pts + 5 if max_pts > 0 else 10]))
+st.plotly_chart(fig_barras, use_container_width=True)
 
 # ==============================================================================
-# --- 🎣 MINIJUEGO: LA PESCA DE JUAN (JUANPRONA REPLEGADO 60S + 50% VISIBLES) --
+# --- 🎣 MINIJUEGO: LA PESCA DE JUAN ---
 # ==============================================================================
 st.markdown("---")
 st.subheader("🎣 Minijuego: La Pesca de Juan")
 
-img_base64_pesca = img_base64  # Asegúrate de tener definida esta variable previamente
+img_base64_pesca = obtener_imagen_base64("img/athletic.png") # O la ruta de la imagen que uses para Juan (ej: primer escudo o archivo general)
+# Si tienes una imagen específica para Juan en base64, reemplaza esta variable o usa directamente tu `img_base64` anterior.
+img_base64_pesca = locals().get('img_base64', '') 
 
 html_pesca_template = """
 <!DOCTYPE html>
@@ -845,7 +277,6 @@ html_pesca_template = """
     const winScreen = document.getElementById('win-screen');
     const penaltyEl = document.getElementById('penalty-timer');
     const pSecondsEl = document.getElementById('p-seconds');
-    const insText = document.getElementById('instruction-text');
     const giantAlert = document.getElementById('giant-alert');
     const fsBtn = document.getElementById('fullscreen-btn');
     const container = document.getElementById('game-container');
@@ -893,7 +324,6 @@ html_pesca_template = """
     let angleSpeed = 0.035; 
     let fixedAngle = 0; let chargeForce = 0;
     
-    // El JUANPRONA tiene un temporizador para volver a activarse
     let heli = { x: 100, y: 35, vx: 3, nextChange: 0, radarWidth: 90, active: true, reactiveTime: 0 };
     
     let patera = { 
@@ -938,13 +368,12 @@ html_pesca_template = """
 
         let assignJuanin = false;
         if (type === TYPES.JUAN) {
-            let currentJuanines = countJuanines();
-            if (currentJuanines < Math.round((currentJuanes + 1) * 0.70)) {
+            let currentJuaninesCount = countJuanines();
+            if (currentJuaninesCount < Math.round((currentJuanes + 1) * 0.70)) {
                 assignJuanin = true;
             }
         }
 
-        // Por defecto nacen con probabilidad 50%
         let isDiscovered = Math.random() >= 0.50; 
         let maxLifeTime = 25000 + Math.random() * 15000;
         let randomDepthPct = 0.45 + Math.random() * 0.45;
@@ -1006,7 +435,6 @@ html_pesca_template = """
             if (acidDrops[d].y > height) acidDrops.splice(d, 1);
         }
 
-        // CONTROL DEL JUANPRONA: Si está inactivo y pasó su tregua de 60s, vuelve
         if (!heli.active && now > heli.reactiveTime) {
             heli.active = true;
             heli.x = 100;
@@ -1109,7 +537,6 @@ html_pesca_template = """
             nextSpawnTime = now + 3500;
         }
 
-        // --- REGLAS ESTRICTAS DE PROPORCIONES ---
         let totalJuanesTarget = Math.round(objects.length * 0.30);
         let currentJuanes = countType(TYPES.JUAN);
         
@@ -1145,7 +572,6 @@ html_pesca_template = """
             }
         }
 
-        // CORRECCIÓN: Como mínimo el 50% de bultos descubiertos siempre
         let totalDiscovered = objects.filter(o => o.discovered).length;
         let minimumRequired = Math.ceil(objects.length * 0.50);
 
@@ -1186,18 +612,22 @@ html_pesca_template = """
                 if (hook.x < 0 || hook.x > width || hook.y > height) inputState = 'returning';
             } else {
                 let dx = hook.targetX - hook.x; let dy = hook.targetY - hook.y; let dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > 18) {
+                
+                // Comprobación de colisión en tiempo real durante el trayecto (atraviesa / intercepta)
+                let targetHit = null; let hitIndex = -1;
+                for(let i=0; i<objects.length; i++) {
+                    let o = objects[i]; let activeSize = o.discovered ? (o.isJuanin ? 15 : 28) : 28;
+                    if (Math.sqrt((hook.x - o.x)**2 + (hook.y - o.y)**2) < activeSize) {
+                        targetHit = o; hitIndex = i; break;
+                    }
+                }
+
+                if (targetHit) {
+                    processCatch(targetHit, hitIndex);
+                } else if (dist > 18) {
                     hook.x += (dx / dist) * 18; hook.y += (dy / dist) * 18;
                 } else {
-                    let targetHit = null; let hitIndex = -1;
-                    for(let i=0; i<objects.length; i++) {
-                        let o = objects[i]; let activeSize = o.discovered ? (o.isJuanin ? 15 : 28) : 28;
-                        if (Math.sqrt((hook.x - o.x)**2 + (hook.y - o.y)**2) < activeSize) {
-                            targetHit = o; hitIndex = i; break;
-                        }
-                    }
-                    if (targetHit) processCatch(targetHit, hitIndex);
-                    else inputState = 'returning';
+                    inputState = 'returning';
                 }
             }
         } else if (inputState === 'returning') {
@@ -1207,7 +637,6 @@ html_pesca_template = """
         }
     }
 
-    // CORRECCIÓN: El JUANPRONA se retira de la pantalla durante los 60s de la tramitación
     function processPateraCatch() {
         patera.active = false; 
         waves = []; 
@@ -1218,7 +647,6 @@ html_pesca_template = """
         
         inputState = 'returning';
         
-        // MODIFICACIÓNaquí: Ahora solo se suman 2 puntos fijos
         score += 2; 
         scoreEl.innerText = score;
         
@@ -1281,7 +709,6 @@ html_pesca_template = """
             ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(wave.x, wave.y + 4, wave.size, Math.PI, 0, false); ctx.stroke();
         });
 
-        // Solo dibuja el helicóptero si está activo en pantalla
         if (heli.active) {
             ctx.fillStyle = 'rgba(255, 235, 59, 0.14)'; ctx.beginPath(); ctx.moveTo(heli.x, heli.y + 10);
             ctx.lineTo(heli.x - heli.radarWidth, seaLine); ctx.lineTo(heli.x + heli.radarWidth, seaLine); ctx.closePath(); ctx.fill();
@@ -1389,8 +816,6 @@ html_pesca_template = """
 
     draw();
 </script>
-</body>
-</html>
 """
 
 html_pesca = html_pesca_template.replace("{{JUAN_IMAGE_BASE64}}", img_base64_pesca)
